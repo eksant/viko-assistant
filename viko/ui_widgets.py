@@ -380,3 +380,184 @@ class SessionCard(QWidget):
         p.drawText(10, 53, "UPTIME")
         p.drawText(W // 2, 53, f"OPS: {self._ops}")
         p.end()
+
+
+class HudCanvas(QWidget):
+    """Concentric segmented rings, scanner arcs, pulse waves, waveform, state indicator."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._tick   = 0
+        self._audio  = 0.0
+        self._rot    = [0.0] * 7
+        self._spd    = [0.28, -0.44, 0.20, -0.36, 0.52, -0.22, 0.12]
+        self._pulses: list[float] = [0.0, 80.0, 160.0]
+        self._scan     = [0.0, 180.0, 90.0, 270.0]
+        self._scan_spd = [1.4, -0.9, 2.1, -1.6]
+        self.state       = "idle"      # "idle" | "listening" | "speaking" | "thinking"
+        self._muted      = False
+        self._blink      = True
+        self._blink_tick = 0
+        import random as _rnd
+        self._rnd = _rnd
+        N = 48
+        self._wave = [0.0] * N
+        self.setMinimumSize(320, 320)
+        t = QTimer(self); t.timeout.connect(self._step); t.start(40)
+
+    def set_state(self, state: str):
+        """Accept viko.py state strings and map to animation state."""
+        s = state.upper()
+        if s == "SPEAKING":     self.state = "speaking"
+        elif s == "LISTENING":  self.state = "listening"
+        elif s == "THINKING":   self.state = "listening"   # same animation
+        elif s == "MUTED":      self._muted = True; self.state = "idle"
+        else:                   self.state = "idle"
+        if s != "MUTED":        self._muted = False
+
+    def set_audio_level(self, rms: float):
+        """Feed real RMS (0..1) from mic callback; falls back to simulated."""
+        self._audio = min(1.0, rms * 3)
+
+    def _step(self):
+        self._tick += 1
+        if self._audio < 0.01:   # simulate when no real audio
+            self._audio = 0.30 + 0.28 * abs(math.sin(self._tick * 0.07))
+        for i in range(7):
+            self._rot[i] = (self._rot[i] + self._spd[i]) % 360
+        lim = 210.0
+        spd = 1.8 + self._audio * 0.8
+        self._pulses = [r + spd for r in self._pulses if r + spd < lim]
+        if len(self._pulses) < 4 and self._tick % 38 == 0:
+            self._pulses.append(0.0)
+        for i in range(4):
+            self._scan[i] = (self._scan[i] + self._scan_spd[i]) % 360
+        self._blink_tick += 1
+        if self._blink_tick % 14 == 0:
+            self._blink = not self._blink
+        for i in range(len(self._wave)):
+            if self.state == "speaking":
+                tgt = self._rnd.uniform(0.12, 1.0)
+            elif self.state == "listening":
+                tgt = 0.04 + 0.18 * abs(math.sin(self._tick * 0.09 + i * 0.55))
+            else:
+                tgt = 0.02 + 0.03 * abs(math.sin(self._tick * 0.04 + i * 0.3))
+            self._wave[i] += (tgt - self._wave[i]) * 0.25
+        self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W, H = self.width(), self.height()
+        cx = W // 2 + (RIGHT_W - LEFT_W) // 2
+        cy = H // 2
+
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(BG))
+        p.drawRect(0, 0, W, H)
+        rg = QRadialGradient(QPointF(cx, cy), min(W, H) // 2)
+        rg.setColorAt(0, _c(0, 45, 75, 28)); rg.setColorAt(1, _c(0, 0, 0, 0))
+        p.setBrush(QBrush(rg)); p.drawRect(0, 0, W, H)
+
+        rings = [
+            (172, 48,  3, 0.9, 28, False),
+            (154, 12,  8, 2.2, 55, True ),
+            (136, 64,  2, 0.8, 26, False),
+            (118, 24,  5, 1.5, 44, False),
+            (100,  8,  8, 2.8, 80, True ),
+            ( 82, 40,  4, 1.0, 38, False),
+            ( 64, 16,  6, 2.2, 68, True ),
+        ]
+        for i, (r, nseg, gap, lw, base_a, prom) in enumerate(rings):
+            rot = self._rot[i]; seg_deg = 360 / nseg; arc_deg = seg_deg - gap
+            ab = int(self._audio * 38) if prom else 0
+            a  = min(255, base_a + ab)
+            rect = QRectF(cx - r, cy - r, r * 2, r * 2)
+            if prom:
+                p.setPen(QPen(pri(a // 5), lw * 5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
+                for j in range(nseg):
+                    p.drawArc(rect, int((rot + j * seg_deg) * 16), int(arc_deg * 16))
+            p.setPen(QPen(pri(a), lw, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
+            for j in range(nseg):
+                p.drawArc(rect, int((rot + j * seg_deg) * 16), int(arc_deg * 16))
+
+        lim = 210.0
+        for pr in self._pulses:
+            a = max(0, int(200 * (1.0 - pr / lim)))
+            p.setPen(QPen(pri(a), 1.2)); p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawEllipse(QPointF(cx, cy), pr, pr)
+
+        t_r_out = 174.0; t_r_in = t_r_out - 7; t_r_lng = t_r_out - 13
+        p.setPen(QPen(pri(90), 1))
+        for deg in range(0, 360, 6):
+            rad = math.radians(deg); cos_r, sin_r = math.cos(rad), math.sin(rad)
+            inn = t_r_lng if deg % 30 == 0 else t_r_in
+            p.drawLine(QPointF(cx + t_r_out * cos_r, cy - t_r_out * sin_r),
+                       QPointF(cx + inn * cos_r, cy - inn * sin_r))
+        m_r_out = 102.0; p.setPen(QPen(pri(70), 1))
+        for deg in range(0, 360, 15):
+            rad = math.radians(deg); cos_r, sin_r = math.cos(rad), math.sin(rad)
+            inn = m_r_out - 10 if deg % 45 == 0 else m_r_out - 5
+            p.drawLine(QPointF(cx + m_r_out * cos_r, cy - m_r_out * sin_r),
+                       QPointF(cx + inn * cos_r, cy - inn * sin_r))
+
+        scanners = [(174,0,38,2.2,pri),(174,1,22,1.5,pri),(136,2,52,1.8,amb),(154,3,28,1.2,pri)]
+        sa = int(160 + 60 * self._audio)
+        for r, si, arc_len, lw, col_fn in scanners:
+            rect = QRectF(cx - r, cy - r, r * 2, r * 2)
+            p.setPen(QPen(col_fn(sa // 5), lw * 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
+            p.drawArc(rect, int(self._scan[si] * 16), int(arc_len * 16))
+            p.setPen(QPen(col_fn(sa), lw, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
+            p.drawArc(rect, int(self._scan[si] * 16), int(arc_len * 16))
+
+        for angle, lbl in [(90,"N"),(0,"E"),(270,"S"),(180,"W")]:
+            a_rad = math.radians(angle)
+            mx2 = cx + int(100 * math.cos(a_rad)); my2 = cy - int(100 * math.sin(a_rad))
+            p.setPen(QPen(pri(115), 1)); p.setBrush(QBrush(pri(28)))
+            p.drawEllipse(QPointF(mx2, my2), 5.5, 5.5)
+            p.setFont(F(7, True)); p.setPen(pri(185))
+            p.drawText(mx2 - 3, my2 + 4, lbl)
+
+        orb_r = 38 + self._audio * 10
+        rg2 = QRadialGradient(QPointF(cx, cy), orb_r)
+        rg2.setColorAt(0.00, pri(210)); rg2.setColorAt(0.35, pri(70))
+        rg2.setColorAt(0.75, pri(14)); rg2.setColorAt(1.00, pri(0))
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(rg2))
+        p.drawEllipse(QPointF(cx, cy), orb_r, orb_r)
+        p.setPen(QPen(pri(155), 1.5)); p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawEllipse(QPointF(cx, cy), 19, 19)
+        for i in range(4):
+            wr = 21 + i * 9 + self._audio * 15; wa = max(0, int(125 - i * 28))
+            p.setPen(QPen(pri(wa), 1)); p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawEllipse(QPointF(cx, cy), wr, wr)
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(PRI))
+        p.drawEllipse(QPointF(cx, cy), 3, 3)
+
+        N = len(self._wave); bw = 7; max_h = 44
+        wx0 = cx - N * bw // 2; wy = H - 18
+        for i, h_frac in enumerate(self._wave):
+            hgt = max(2, int(h_frac * max_h))
+            if self.state == "speaking":    col = PRI if h_frac > 0.55 else pri(110)
+            elif self.state == "listening": col = pri(130)
+            else:                           col = pri(50)
+            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(col))
+            p.drawRect(QRectF(wx0 + i * bw, wy - hgt, bw - 1, hgt))
+        p.setPen(QPen(pri(35), 1))
+        p.drawLine(int(wx0), wy, int(wx0 + N * bw), wy)
+
+        if self.state == "speaking":    dot_col = AMB; lbl_text = "SPEAKING"
+        elif self.state == "listening": dot_col = SUC; lbl_text = "LISTENING"
+        else:                           dot_col = pri(55); lbl_text = "STANDBY"
+        if self._muted: dot_col = _c(255, 68, 68); lbl_text = "MUTED"
+
+        sym = "●" if self._blink else "○"
+        ind_y = wy - max_h - 16
+        p.setFont(F(10, True)); p.setPen(dot_col)
+        lbl_full = f"{sym}  {lbl_text}"
+        fm = QFontMetrics(p.font())
+        p.drawText(cx - fm.horizontalAdvance(lbl_full) // 2, ind_y, lbl_full)
+
+        p.setFont(F(7)); p.setPen(pri(75))
+        top_lbl = "SYSTEM TRACKING"
+        fm2 = QFontMetrics(p.font())
+        p.drawText(cx - fm2.horizontalAdvance(top_lbl) // 2, cy - 185, top_lbl)
+        p.end()
