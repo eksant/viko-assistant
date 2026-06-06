@@ -3,7 +3,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-_LOG_DIR  = Path(__file__).resolve().parent / "logs"
+_LOG_DIR  = Path(__file__).resolve().parent.parent / "logs"
 _LOG_FILE = _LOG_DIR / "viko.log"
 _FORMAT   = "[%(asctime)s][%(levelname)s][%(name)s] %(message)s"
 _DATE_FMT = "%Y-%m-%d %H:%M:%S"

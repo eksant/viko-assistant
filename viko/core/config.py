@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-_BASE_DIR = Path(__file__).resolve().parent.parent
+_BASE_DIR = Path(__file__).resolve().parent.parent.parent
 _ENV_PATH = _BASE_DIR / ".env"
 
 load_dotenv(_ENV_PATH, override=False)
