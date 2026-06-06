@@ -27,7 +27,7 @@ from pathlib import Path
 def _base_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent
-    return Path(__file__).resolve().parent.parent
+    return Path(__file__).resolve().parent.parent.parent
 
 DB_PATH: Path = _base_dir() / "memory" / "viko_memory.db"
 
