@@ -1,5 +1,6 @@
 import json
 import sys
+import threading
 from pathlib import Path
 
 
@@ -67,7 +68,29 @@ def _clear_pending_restart():
 
 class SelfEngineerEngine:
 
+    def __init__(self):
+        self._lock = threading.Lock()
+
     def run(
+        self,
+        intent:       str,
+        action:       str,
+        target_files: list[str] | None = None,
+        speak=None,
+    ) -> str:
+        # Utility actions (cancel/history/restore/confirm) bypass the lock
+        if action in ("cancel", "history", "restore", "confirm"):
+            return self._run_inner(intent, action, target_files, speak)
+
+        if not self._lock.acquire(blocking=False):
+            return "Sedang memproses permintaan sebelumnya. Tunggu sebentar ya, nanti lanjut."
+
+        try:
+            return self._run_inner(intent, action, target_files, speak)
+        finally:
+            self._lock.release()
+
+    def _run_inner(
         self,
         intent:       str,
         action:       str,
