@@ -761,7 +761,29 @@ class VikoLive:
         args = dict(fc.args or {})
 
         print(f"[Viko] {name}  {args}")
-        self.ui.set_state("THINKING")
+        _TOOL_STATE = {
+            "code_helper":      "CODING",
+            "dev_agent":        "CODING",
+            "self_update":      "CODING",
+            "agent_task":       "WORKING",
+            "file_controller":  "WORKING",
+            "cmd_control":      "WORKING",
+            "desktop_control":  "WORKING",
+            "computer_control": "WORKING",
+            "computer_settings":"WORKING",
+            "browser_control":  "WORKING",
+            "web_search":       "WORKING",
+            "flight_finder":    "WORKING",
+            "file_processor":   "WORKING",
+            "youtube_video":    "WORKING",
+            "send_message":     "WORKING",
+            "screen_process":   "WORKING",
+            "navigate_browser": "WORKING",
+            "render_content":   "WORKING",
+            "browser_interact": "WORKING",
+            "visual_control":   "WORKING",
+        }
+        self.ui.set_state(_TOOL_STATE.get(name, "THINKING"))
 
         if name == "save_memory":
             category = args.get("category", "notes")

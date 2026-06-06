@@ -509,6 +509,8 @@ class HudCanvas(QWidget):
         if s == "SPEAKING":     self.state = "speaking"
         elif s == "LISTENING":  self.state = "listening"
         elif s == "THINKING":   self.state = "listening"
+        elif s == "WORKING":    self.state = "working"
+        elif s == "CODING":     self.state = "coding"
         elif s == "MUTED":      self._muted = True; self.state = "idle"
         elif s == "PAUSED":     self.state = "paused"
         else:                   self.state = "idle"
@@ -649,6 +651,8 @@ class HudCanvas(QWidget):
             hgt = max(2, int(h_frac * max_h))
             if self.state == "speaking":    col = PRI if h_frac > 0.55 else pri(110)
             elif self.state == "listening": col = pri(130)
+            elif self.state == "working":   col = amb(180) if h_frac > 0.3 else amb(90)
+            elif self.state == "coding":    col = PRI if h_frac > 0.4 else pri(160)
             else:                           col = pri(50)
             p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(col))
             p.drawRect(QRectF(wx0 + i * bw, wy - hgt, bw - 1, hgt))
@@ -657,6 +661,8 @@ class HudCanvas(QWidget):
 
         if self.state == "speaking":    dot_col = AMB; lbl_text = "SPEAKING"
         elif self.state == "listening": dot_col = SUC; lbl_text = "LISTENING"
+        elif self.state == "working":   dot_col = amb(int(180 + 60 * math.sin(self._tick * 0.12))); lbl_text = "WORKING"
+        elif self.state == "coding":    dot_col = PRI; lbl_text = "CODING"
         elif self.state == "paused":    dot_col = AMB; lbl_text = "PAUSED"
         else:                           dot_col = pri(55); lbl_text = "STANDBY"
         if self._muted: dot_col = _c(255, 68, 68); lbl_text = "MUTED"
