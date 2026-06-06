@@ -66,38 +66,49 @@ python viko.py
 ## Architecture
 
 ```
-viko.py                  — Main agent: Gemini Live session, tool routing
+viko.py                      — Main agent: Gemini Live session, tool routing
 viko/
-  prompt.txt             — System prompt (VIKO's personality + tool rules)
-  ui.py                  — PyQt6 main window
-  ui_widgets.py          — HUD widgets, activity panel
-  ui_theme.py            — Colors, fonts, stylesheet
-  memory.py              — Long-term memory extraction
-  conversation.py        — Session management, SQLite history
-  context_builder.py     — Builds context for Gemini
-  vector_store.py        — ChromaDB semantic search
-  workspace.py           — File storage for generated content
-  config.py              — API key loading
+  prompt.txt                 — System prompt (VIKO's personality + tool rules)
+  core/
+    config.py                — API key loading from .env
+    logger.py                — Structured logging (RotatingFileHandler)
+    client.py                — LLM client (OpenRouter / Gemini wrapper)
+    memory.py                — Long-term memory extraction
+    conversation.py          — Session management, SQLite history
+    context_builder.py       — Builds system context for Gemini
+    vector_store.py          — ChromaDB semantic search
+    workspace.py             — File storage for generated content
+  ui/
+    window.py                — PyQt6 main window
+    widgets.py               — HUD canvas, activity panel, chat bubbles
+    theme.py                 — Colors, fonts, stylesheet constants
+    browser_panel.py         — Embedded Chromium browser widget
+    agent_browser.py         — CDP browser server for AI control
   skills/
-    self_update.py        — Voice-facing self-modification skill
-    dev_agent.py          — Build complete projects from scratch
-    code_helper.py        — Code assistance, debugging, file editing
-    browser_tool.py       — Embedded browser control (JS + CDP)
-    computer_control.py   — Mouse, keyboard, screenshot automation
-    file_controller.py    — File system operations
-    web_search.py         — DuckDuckGo search
-    weather_report.py     — Weather lookup
+    self_update.py           — Voice-facing self-modification skill
+    dev_agent.py             — Build complete projects from scratch
+    code_helper.py           — Code assistance, debugging, file editing
+    browser_tool.py          — Embedded browser control (JS + CDP)
+    computer_control.py      — Mouse, keyboard, screenshot automation
+    file_controller.py       — File system operations
+    web_search.py            — DuckDuckGo search
+    weather_report.py        — Weather lookup
     ... (20+ skills total)
+  agent/
+    planner.py               — Breaks goals into tool-call steps via LLM
+    executor.py              — Runs steps, handles retries and replanning
+    recovery.py              — Error analysis and fix generation via LLM
+    queue.py                 — Priority task queue with cancellation
   self_engineer/
-    engine.py             — Self-modification state machine (mutex-protected)
-    analyzer.py           — Reads codebase to build LLM context
-    planner.py            — Generates structured change plan via LLM
-    generator.py          — Generates code patches and new files
-    backup.py             — File versioning + manifest before every change
-    tester.py             — AST syntax + subprocess import + core load checks
-    restarter.py          — Graceful restart via os.execv + flag file
-    llm.py                — LLM router: Claude if key set, else Gemini
-    backups/              — Timestamped backup files (gitignored)
+    engine.py                — Self-modification state machine (mutex-protected)
+    analyzer.py              — Reads codebase to build LLM context
+    planner.py               — Generates structured change plan via LLM
+    generator.py             — Generates code patches and new files
+    backup.py                — File versioning + manifest before every change
+    tester.py                — AST syntax + subprocess import + core load checks
+    restarter.py             — Graceful restart via os.execv + flag file
+    llm.py                   — LLM router: Claude if key set, else Gemini
+    backups/                 — Timestamped backup files (gitignored)
 ```
 
 ### Self-Modification Voice Flow
