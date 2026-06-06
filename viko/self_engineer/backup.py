@@ -21,7 +21,19 @@ def _ensure_dir():
 
 
 def _ts() -> str:
-    return datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    return datetime.now().strftime("%Y-%m-%d_%H%M%S_%f")
+
+
+def _next_id(entries: list) -> str:
+    if not entries:
+        return "bk_001"
+    nums = []
+    for e in entries:
+        try:
+            nums.append(int(e["id"].split("_")[1]))
+        except (KeyError, ValueError, IndexError):
+            pass
+    return f"bk_{(max(nums) + 1) if nums else 1:03d}"
 
 
 def _load_manifest() -> list:
@@ -37,13 +49,13 @@ def save(plan: dict, files_changed: list[str], files_created: list[str]) -> str:
     _ensure_dir()
     ts      = _ts()
     entries = _load_manifest()
-    entry_id = f"bk_{len(entries) + 1:03d}"
+    entry_id = _next_id(entries)
 
     for rel_path in files_changed:
         src = BASE_DIR / rel_path
         if src.exists():
             safe = rel_path.replace("/", "__").replace("\\", "__")
-            shutil.copy2(src, BACKUP_DIR / f"{ts}_{safe}")
+            shutil.copy2(src, BACKUP_DIR / f"{ts}_{entry_id}_{safe}")
 
     entry = {
         "id":            entry_id,
@@ -64,11 +76,12 @@ def restore(entry_id: str) -> str:
     if not entry:
         return f"Backup {entry_id} tidak ditemukan."
 
-    ts       = entry["timestamp"]
+    ts           = entry["timestamp"]
+    entry_id_val = entry["id"]
     restored = []
     for rel_path in entry["files_changed"]:
         safe = rel_path.replace("/", "__").replace("\\", "__")
-        src  = BACKUP_DIR / f"{ts}_{safe}"
+        src  = BACKUP_DIR / f"{ts}_{entry_id_val}_{safe}"
         dst  = BASE_DIR / rel_path
         if src.exists():
             dst.parent.mkdir(parents=True, exist_ok=True)
