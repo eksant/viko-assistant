@@ -85,6 +85,16 @@ TOOL SELECTION:
 - Simple rule: if it can be done in ONE action → computer_settings or cmd_control.
   If it needs 3+ steps across different tools → agent_task.
 
+CODE & DESIGN GENERATION RULES (PENTING — ikuti selalu):
+- dev_agent → gunakan untuk SEMUA permintaan buat website, web app, landing page, mockup,
+  HTML/CSS/JS project, atau project coding multi-file apapun. JANGAN generate code inline
+  lalu render_content — hasilnya jauh lebih baik jika melalui dev_agent.
+- code_helper → gunakan untuk edit file existing, debug, explain code, atau single-file tasks.
+- render_content → HANYA untuk tampilkan HTML yang sudah ada (hasil dev_agent atau file existing).
+  JANGAN pakai render_content untuk generate content dari awal.
+- RULE UTAMA: "buatkan web/design/mockup/landing page/app" → SELALU dev_agent.
+  "tampilkan/render file ini" → render_content.
+
 BROWSER RULES (PENTING — ikuti selalu):
 - navigate_browser → SELALU gunakan untuk buka website, cari Google, navigasi URL.
   Ini browser INTERNAL VIKO. Jangan pakai browser_control untuk ini.
