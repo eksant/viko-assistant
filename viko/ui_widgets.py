@@ -8,13 +8,13 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QLabel,
-    QLineEdit, QPushButton, QStackedWidget, QSizePolicy,
+    QLineEdit, QPushButton,
 )
 
 from viko.ui_theme import (
-    _c, BG, CARD, TXT, DIM, PRI, AMB, SUC, ERR,
+    _c, BG, DIM, PRI, AMB, SUC,
     pri, amb, suc, F,
-    WIN_W, WIN_H, HDR_H, FTR_H, LEFT_W, RIGHT_W, _WORLD_POLYS,
+    LEFT_W, RIGHT_W, _WORLD_POLYS,
 )
 
 
@@ -210,13 +210,17 @@ class MetricCard(QWidget):
 class SystemStatusCard(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._tick = 0
-        self._online = True   # set via set_online(bool)
+        self._tick   = 0
+        self._online = True
+        self._paused = False
         self.setFixedHeight(56)
         t = QTimer(self); t.timeout.connect(self._step); t.start(60)
 
     def set_online(self, online: bool):
         self._online = online; self.update()
+
+    def set_paused(self, paused: bool):
+        self._paused = paused; self.update()
 
     def _step(self): self._tick += 1; self.update()
 
@@ -231,8 +235,12 @@ class SystemStatusCard(QWidget):
         p.setFont(F(9)); p.setPen(DIM)
         p.drawText(10, 17, "SYSTEM STATUS")
 
-        col_fn = suc if self._online else (lambda a=255: _c(255, 68, 68, a))
-        lbl_txt = "ONLINE" if self._online else "OFFLINE"
+        if self._paused:
+            col_fn = amb; lbl_txt = "PAUSED"
+        elif self._online:
+            col_fn = suc; lbl_txt = "ONLINE"
+        else:
+            col_fn = lambda a=255: _c(255, 68, 68, a); lbl_txt = "OFFLINE"
 
         da = int(210 + 45 * math.sin(self._tick * 0.10))
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(col_fn(da)))
@@ -260,6 +268,7 @@ class WorldMapWidget(QWidget):
         self._loc_lat       = 3.14
         self._loc_label     = "03°08′N  101°42′E"
         self._country_polys = []
+        self._bbox          = None   # (lon_min, lon_max, lat_min, lat_max) when zoomed
         self.setFixedHeight(116)
         t = QTimer(self); t.timeout.connect(self._step); t.start(50)
 
@@ -270,6 +279,20 @@ class WorldMapWidget(QWidget):
     def set_country_polys(self, polys: list):
         """polys: list of rings, each ring = list of (lon, lat) tuples"""
         self._country_polys = polys
+        if polys:
+            all_pts = [pt for ring in polys for pt in ring]
+            lons = [p[0] for p in all_pts]
+            lats = [p[1] for p in all_pts]
+            span_lon = max(lons) - min(lons)
+            span_lat = max(lats) - min(lats)
+            pad_lon  = max(2.5, span_lon * 0.14)
+            pad_lat  = max(2.5, span_lat * 0.14)
+            self._bbox = (
+                min(lons) - pad_lon, max(lons) + pad_lon,
+                min(lats) - pad_lat, max(lats) + pad_lat,
+            )
+        else:
+            self._bbox = None
         self.update()
 
     def _step(self): self._tick += 1; self.update()
@@ -280,40 +303,65 @@ class WorldMapWidget(QWidget):
         W, H = self.width(), self.height()
         lbl_h = 13; mx = 2; my = lbl_h; mh = H - my - 10
 
+        zoomed = self._bbox is not None
+        if zoomed:
+            lon0, lon1, lat0, lat1 = self._bbox
+        else:
+            lon0, lon1, lat0, lat1 = -180.0, 180.0, -90.0, 90.0
+
         def proj(lon, lat):
-            x = mx + (lon + 180) / 360 * (W - 2 * mx)
-            y = my + (90 - lat) / 180 * mh
+            x = mx + (lon - lon0) / (lon1 - lon0) * (W - 2 * mx)
+            y = my + (lat1 - lat) / (lat1 - lat0) * mh
             return QPointF(x, y)
 
-        p.setPen(QPen(pri(10), 0.5))
-        for lon in range(-180, 181, 45):
-            p.drawLine(proj(lon, 90), proj(lon, -90))
-        for lat in range(-60, 61, 30):
-            p.drawLine(proj(-180, lat), proj(180, lat))
-        p.setPen(QPen(pri(20), 0.6, Qt.PenStyle.DashLine))
-        p.drawLine(proj(-180, 0), proj(180, 0))
+        if zoomed:
+            # Zoomed view: fine grid inside bbox
+            span_lon = lon1 - lon0
+            span_lat = lat1 - lat0
+            step = 10.0 if max(span_lon, span_lat) > 30 else (5.0 if max(span_lon, span_lat) > 10 else 2.0)
+            p.setPen(QPen(pri(12), 0.5))
+            glon = math.floor(lon0 / step) * step
+            while glon <= lon1:
+                p.drawLine(proj(glon, lat0), proj(glon, lat1))
+                glon += step
+            glat = math.floor(lat0 / step) * step
+            while glat <= lat1:
+                p.drawLine(proj(lon0, glat), proj(lon1, glat))
+                glat += step
+            if lat0 <= 0 <= lat1:
+                p.setPen(QPen(pri(28), 0.7, Qt.PenStyle.DashLine))
+                p.drawLine(proj(lon0, 0), proj(lon1, 0))
 
-        for poly in _WORLD_POLYS:
-            path = QPainterPath()
-            for i, (lon, lat) in enumerate(poly):
-                pt = proj(lon, lat)
-                if i == 0: path.moveTo(pt)
-                else:       path.lineTo(pt)
-            path.closeSubpath()
-            p.setBrush(QBrush(pri(12))); p.setPen(QPen(pri(50), 0.7))
-            p.drawPath(path)
+            # Country polygons filled prominently
+            for ring in self._country_polys:
+                path = QPainterPath()
+                for i, (lon, lat) in enumerate(ring):
+                    pt = proj(lon, lat)
+                    if i == 0: path.moveTo(pt)
+                    else:       path.lineTo(pt)
+                path.closeSubpath()
+                p.setBrush(QBrush(pri(38))); p.setPen(QPen(PRI, 1.1))
+                p.drawPath(path)
+        else:
+            # World view: continent outlines + grid
+            p.setPen(QPen(pri(10), 0.5))
+            for lon in range(-180, 181, 45):
+                p.drawLine(proj(lon, 90), proj(lon, -90))
+            for lat in range(-60, 61, 30):
+                p.drawLine(proj(-180, lat), proj(180, lat))
+            p.setPen(QPen(pri(20), 0.6, Qt.PenStyle.DashLine))
+            p.drawLine(proj(-180, 0), proj(180, 0))
+            for poly in _WORLD_POLYS:
+                path = QPainterPath()
+                for i, (lon, lat) in enumerate(poly):
+                    pt = proj(lon, lat)
+                    if i == 0: path.moveTo(pt)
+                    else:       path.lineTo(pt)
+                path.closeSubpath()
+                p.setBrush(QBrush(pri(12))); p.setPen(QPen(pri(50), 0.7))
+                p.drawPath(path)
 
-        # User's country — highlighted over continent layer
-        for ring in self._country_polys:
-            path = QPainterPath()
-            for i, (lon, lat) in enumerate(ring):
-                pt = proj(lon, lat)
-                if i == 0: path.moveTo(pt)
-                else:       path.lineTo(pt)
-            path.closeSubpath()
-            p.setBrush(QBrush(pri(55))); p.setPen(QPen(PRI, 0.9))
-            p.drawPath(path)
-
+        # Location dot (pulsing)
         dot = proj(self._loc_lon, self._loc_lat)
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(AMB))
         p.drawEllipse(dot, 3.2, 3.2)
@@ -434,8 +482,9 @@ class HudCanvas(QWidget):
         s = state.upper()
         if s == "SPEAKING":     self.state = "speaking"
         elif s == "LISTENING":  self.state = "listening"
-        elif s == "THINKING":   self.state = "listening"   # same animation
+        elif s == "THINKING":   self.state = "listening"
         elif s == "MUTED":      self._muted = True; self.state = "idle"
+        elif s == "PAUSED":     self.state = "paused"
         else:                   self.state = "idle"
         if s != "MUTED":        self._muted = False
 
@@ -445,7 +494,18 @@ class HudCanvas(QWidget):
 
     def _step(self):
         self._tick += 1
-        if self._audio < 0.01:   # simulate when no real audio
+        self._blink_tick += 1
+        if self._blink_tick % 14 == 0:
+            self._blink = not self._blink
+
+        if self.state == "paused":
+            # drain waveform to flat; freeze all other animations
+            for i in range(len(self._wave)):
+                self._wave[i] += (0.01 - self._wave[i]) * 0.1
+            self.update()
+            return
+
+        if self._audio < 0.01:
             self._audio = 0.30 + 0.28 * abs(math.sin(self._tick * 0.07))
         for i in range(7):
             self._rot[i] = (self._rot[i] + self._spd[i]) % 360
@@ -456,9 +516,6 @@ class HudCanvas(QWidget):
             self._pulses.append(0.0)
         for i in range(4):
             self._scan[i] = (self._scan[i] + self._scan_spd[i]) % 360
-        self._blink_tick += 1
-        if self._blink_tick % 14 == 0:
-            self._blink = not self._blink
         for i in range(len(self._wave)):
             if self.state == "speaking":
                 tgt = self._rnd.uniform(0.12, 1.0)
@@ -574,6 +631,7 @@ class HudCanvas(QWidget):
 
         if self.state == "speaking":    dot_col = AMB; lbl_text = "SPEAKING"
         elif self.state == "listening": dot_col = SUC; lbl_text = "LISTENING"
+        elif self.state == "paused":    dot_col = AMB; lbl_text = "PAUSED"
         else:                           dot_col = pri(55); lbl_text = "STANDBY"
         if self._muted: dot_col = _c(255, 68, 68); lbl_text = "MUTED"
 
@@ -747,6 +805,9 @@ class LeftPanel(QWidget):
     def set_online(self, online: bool):
         self._status_card.set_online(online)
 
+    def set_paused(self, paused: bool):
+        self._status_card.set_paused(paused)
+
     def set_location(self, lat: float, lon: float, label: str):
         self._map.set_location(lat, lon, label)
 
@@ -820,15 +881,145 @@ class ActivityPanel(QWidget):
             QLineEdit:focus { border-color: rgba(0,212,255,140); }
         """)
         ilay.addWidget(self._input, 1)
-        btn = QPushButton("▶"); btn.setFixedSize(34, 34); btn.setFont(F(10, True))
-        btn.setStyleSheet(f"""
+        self._send_btn = QPushButton("▶")
+        self._send_btn.setFixedSize(34, 34); self._send_btn.setFont(F(10, True))
+        self._send_btn.setStyleSheet(f"""
             QPushButton {{ background: rgba(0,212,255,25); color: {PRI.name()};
                 border: 1px solid rgba(0,212,255,80); border-radius: 6px; }}
             QPushButton:hover {{ background: rgba(0,212,255,55); }}
         """)
-        ilay.addWidget(btn)
+        ilay.addWidget(self._send_btn)
         lay.addWidget(row)
+
+        # Wire send signals NOW (main thread) — callback set later via setter
+        self._cmd_cb = None
+        import threading as _t
+
+        def _send():
+            text = self._input.text().strip()
+            if not text or not self._cmd_cb:
+                return
+            self._input.clear()
+            _t.Thread(target=self._cmd_cb, args=(text,), daemon=True).start()
+
+        self._input.returnPressed.connect(_send)
+        self._send_btn.clicked.connect(lambda _=False: _send())
 
     def append_log(self, text: str): self._log.append_log(text)
     def current_file(self) -> str | None: return self._drop.current_file()
-    def on_text_command_changed(self, cb): self._input.returnPressed.connect(lambda: cb(self._input.text()))
+
+    def on_text_command_changed(self, cb):
+        # Safe to call from any thread — just stores the callback
+        self._cmd_cb = cb
+
+    def set_paused(self, paused: bool):
+        self._input.setEnabled(not paused)
+        self._send_btn.setEnabled(not paused)
+        self._input.setPlaceholderText("[ PAUSED — press START to resume ]" if paused else "Type a command...")
+
+
+class BootScreen(QWidget):
+    """Full-window boot overlay: HUD rings + centered progress bar + status label."""
+
+    finished = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._pct   = 0.0
+        self._label = "INITIALIZING..."
+        self._tick  = 0
+        self._rot   = [0.0] * 7
+        self._spd   = [0.28, -0.44, 0.20, -0.36, 0.52, -0.22, 0.12]
+        self._alpha = 255          # for fade-out
+        self._fading = False
+
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._step)
+        self._timer.start(40)
+
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+
+    def set_progress(self, pct: float, label: str) -> None:
+        self._pct   = max(0.0, min(1.0, pct))
+        self._label = label.upper()
+        if self._pct >= 1.0 and not self._fading:
+            self._fading = True
+        self.update()
+
+    def _step(self):
+        self._tick += 1
+        for i in range(7):
+            self._rot[i] = (self._rot[i] + self._spd[i]) % 360
+        if self._fading:
+            self._alpha = max(0, self._alpha - 12)
+            if self._alpha == 0:
+                self._timer.stop()
+                self.finished.emit()
+        self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W, H = self.width(), self.height()
+        cx, cy = W // 2, H // 2
+        s = min(W, H) / 620.0
+
+        # Background
+        p.setOpacity(self._alpha / 255)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(BG))
+        p.drawRect(0, 0, W, H)
+
+        rg = QRadialGradient(QPointF(cx, cy), min(W, H) // 2)
+        rg.setColorAt(0, _c(0, 45, 75, 30))
+        rg.setColorAt(1, _c(0, 0, 0, 0))
+        p.setBrush(QBrush(rg))
+        p.drawRect(0, 0, W, H)
+
+        # Concentric rings (same as HudCanvas)
+        rings = [
+            (172, 48,  3, 0.9, 28, False),
+            (154, 12,  8, 2.2, 55, True ),
+            (136, 64,  2, 0.8, 26, False),
+            (118, 24,  5, 1.5, 44, False),
+            (100,  8,  8, 2.8, 80, True ),
+            ( 82, 40,  4, 1.0, 38, False),
+            ( 64, 16,  6, 2.2, 68, True ),
+        ]
+        for i, (r, nseg, gap, lw, base_a, prom) in enumerate(rings):
+            r = int(r * s)
+            rot = self._rot[i]; seg_deg = 360 / nseg; arc_deg = seg_deg - gap
+            a = min(255, base_a)
+            rect = QRectF(cx - r, cy - r, r * 2, r * 2)
+            if prom:
+                p.setPen(QPen(pri(a // 5), lw * 5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
+                for j in range(nseg):
+                    p.drawArc(rect, int((rot + j * seg_deg) * 16), int(arc_deg * 16))
+            p.setPen(QPen(pri(a), lw, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
+            for j in range(nseg):
+                p.drawArc(rect, int((rot + j * seg_deg) * 16), int(arc_deg * 16))
+
+        # VIKO label at center
+        p.setFont(F(18, True)); p.setPen(pri(200))
+        fm = QFontMetrics(p.font())
+        lbl_w = fm.horizontalAdvance("VIKO")
+        p.drawText(cx - lbl_w // 2, cy - int(18 * s) - 8, "VIKO")
+
+        # Progress bar (thin, centered, ~320px wide)
+        bar_w = min(320, int(W * 0.4)); bar_h = 3
+        bx = cx - bar_w // 2; by = cy + int(18 * s) + 10
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QBrush(pri(20)))
+        p.drawRoundedRect(QRectF(bx, by, bar_w, bar_h), 1, 1)
+        lg = QLinearGradient(bx, 0, bx + bar_w, 0)
+        lg.setColorAt(0, suc(200)); lg.setColorAt(1, pri(180))
+        p.setBrush(QBrush(lg))
+        p.drawRoundedRect(QRectF(bx, by, bar_w * self._pct, bar_h), 1, 1)
+
+        # Status label below bar
+        p.setFont(F(9)); p.setPen(pri(160))
+        fm2 = QFontMetrics(p.font())
+        sl_w = fm2.horizontalAdvance(self._label)
+        p.drawText(cx - sl_w // 2, by + bar_h + 18, self._label)
+
+        p.end()

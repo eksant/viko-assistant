@@ -297,6 +297,16 @@ def remember(key: str, value: str, category: str = "notes") -> str:
     if category not in valid:
         category = "notes"
     update_memory({category: {key: {"value": value}}})
+    try:
+        import threading
+        from viko.vector_store import index_fact
+        threading.Thread(
+            target=index_fact,
+            args=(f"{key}: {value}", category, key),
+            daemon=True,
+        ).start()
+    except Exception:
+        pass
     return f"Remembered: {category}/{key} = {value}"
 
 
