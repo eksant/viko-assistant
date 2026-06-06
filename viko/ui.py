@@ -185,17 +185,25 @@ class MainWindow(QMainWindow):
             """
 
         self._btn_ss = _ss
-        self._fs_btn = QPushButton("⛶"); self._fs_btn.setFixedSize(28, 26)
-        self._fs_btn.setFont(F(9, True))
-        self._fs_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._fs_btn.setStyleSheet(_ss()); self._fs_btn.clicked.connect(self._toggle_fullscreen)
-        bbl.addWidget(self._fs_btn)
 
         self._toggle_btn = QPushButton("◧  ACTIVITY"); self._toggle_btn.setFixedHeight(26)
         self._toggle_btn.setFont(F(8, True))
         self._toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._toggle_btn.setStyleSheet(_ss()); self._toggle_btn.clicked.connect(self._toggle_panel)
         bbl.addWidget(self._toggle_btn, 1)
+
+        self._fs_btn = QPushButton("⛶"); self._fs_btn.setFixedSize(28, 26)
+        self._fs_btn.setFont(F(10, True))
+        self._fs_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._fs_btn.setStyleSheet(_ss()); self._fs_btn.clicked.connect(self._toggle_fullscreen)
+        bbl.addWidget(self._fs_btn)
+
+        self._rst_btn = QPushButton("↺"); self._rst_btn.setFixedSize(28, 26)
+        self._rst_btn.setFont(F(11, True))
+        self._rst_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._rst_btn.setStyleSheet(_ss()); self._rst_btn.clicked.connect(self._restart)
+        bbl.addWidget(self._rst_btn)
+
         rcol.addWidget(btn_bar)
 
         self._right_stack = QStackedWidget()
@@ -251,6 +259,11 @@ class MainWindow(QMainWindow):
             self.showNormal(); self._fs_btn.setStyleSheet(self._btn_ss(False))
         else:
             self.showFullScreen(); self._fs_btn.setStyleSheet(self._btn_ss(True))
+
+    def _restart(self):
+        import os
+        QApplication.instance().quit()
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
     # ── Mute ──────────────────────────────────────────────────────────────
     def _toggle_mute(self):
