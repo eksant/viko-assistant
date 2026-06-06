@@ -1,6 +1,5 @@
 import time
 import pyautogui
-from pathlib import Path
 
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.08

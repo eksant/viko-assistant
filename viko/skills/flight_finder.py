@@ -3,7 +3,7 @@ import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from viko.core.config import is_windows, is_mac, is_linux
+from viko.core.config import is_windows, is_mac
 
 _MONTH_MAP: dict[str, int] = {
 

@@ -88,7 +88,7 @@ def run(plan: dict, changes: list[dict]) -> TestResult:
                 return r
 
     modified_core = any(
-        change.get("file", "") in ("viko.py", "viko/ui.py", "viko/ui_widgets.py")
+        change.get("file", "") in ("viko.py", "viko/ui/window.py", "viko/ui/widgets.py")
         for change in changes
     )
     if modified_core:

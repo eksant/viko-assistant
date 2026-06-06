@@ -625,7 +625,7 @@ def _process_video(path: Path, action: str, params: dict, speak=None) -> str:
         end   = params.get("end",   "")
         if not _ffmpeg_available():
             return "ffmpeg not found."
-        out = _output_path(path, f"trim", path.suffix)
+        out = _output_path(path, "trim", path.suffix)
         try:
             cmd = ["ffmpeg", "-i", str(path), "-ss", str(start)]
             if end:
