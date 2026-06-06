@@ -13,6 +13,7 @@ from PyQt6.QtGui  import (
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QStackedWidget, QLabel, QLineEdit, QSizePolicy,
+    QDialog,
 )
 
 from viko.ui_theme   import (
@@ -198,10 +199,21 @@ class MainWindow(QMainWindow):
         self._fs_btn.setStyleSheet(_ss()); self._fs_btn.clicked.connect(self._toggle_fullscreen)
         bbl.addWidget(self._fs_btn)
 
-        self._rst_btn = QPushButton("↺"); self._rst_btn.setFixedSize(28, 26)
-        self._rst_btn.setFont(F(11, True))
+        self._rst_btn = QPushButton("⟳ RST"); self._rst_btn.setFixedHeight(26)
+        self._rst_btn.setFixedWidth(52)
+        self._rst_btn.setFont(F(8, True))
         self._rst_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._rst_btn.setStyleSheet(_ss()); self._rst_btn.clicked.connect(self._restart)
+        self._rst_btn.setToolTip("Restart VIKO")
+        self._rst_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255,179,71,15);
+                color: {AMB.name()};
+                border: 1px solid rgba(255,179,71,60);
+                border-radius: 4px; padding: 0 4px;
+            }}
+            QPushButton:hover {{ background: rgba(255,179,71,40); color: {AMB.name()}; }}
+        """)
+        self._rst_btn.clicked.connect(self._restart)
         bbl.addWidget(self._rst_btn)
 
         rcol.addWidget(btn_bar)
@@ -261,9 +273,51 @@ class MainWindow(QMainWindow):
             self.showFullScreen(); self._fs_btn.setStyleSheet(self._btn_ss(True))
 
     def _restart(self):
-        import os
-        QApplication.instance().quit()
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        dlg = QDialog(self, Qt.WindowType.FramelessWindowHint)
+        dlg.setFixedSize(300, 130)
+        dlg.setStyleSheet("""
+            QDialog {
+                background: #010d14;
+                border: 1px solid rgba(255,179,71,120);
+                border-radius: 8px;
+            }
+        """)
+        lay = QVBoxLayout(dlg)
+        lay.setContentsMargins(20, 18, 20, 14); lay.setSpacing(10)
+
+        title = QLabel("⟳  RESTART VIKO")
+        title.setFont(F(11, True))
+        title.setStyleSheet(f"color: {AMB.name()}; background: transparent;")
+        lay.addWidget(title)
+
+        msg = QLabel("Restart aplikasi sekarang?")
+        msg.setFont(F(9))
+        msg.setStyleSheet(f"color: {TXT.name()}; background: transparent;")
+        lay.addWidget(msg)
+
+        btn_row = QHBoxLayout(); btn_row.setSpacing(8)
+        _btn_style = lambda c, a: f"""
+            QPushButton {{
+                background: rgba({c},15); color: rgba({c},220);
+                border: 1px solid rgba({c},80); border-radius: 4px;
+                padding: 5px 0;
+            }}
+            QPushButton:hover {{ background: rgba({c},{a}); }}
+        """
+        yes = QPushButton("Ya, Restart"); yes.setFont(F(9, True))
+        yes.setStyleSheet(_btn_style("255,179,71", 50))
+        no  = QPushButton("Batal"); no.setFont(F(9))
+        no.setStyleSheet(_btn_style("0,212,255", 40))
+
+        yes.clicked.connect(dlg.accept)
+        no.clicked.connect(dlg.reject)
+        btn_row.addWidget(no); btn_row.addWidget(yes)
+        lay.addLayout(btn_row)
+
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            import os
+            QApplication.instance().quit()
+            os.execv(sys.executable, [sys.executable] + sys.argv)
 
     # ── Mute ──────────────────────────────────────────────────────────────
     def _toggle_mute(self):
