@@ -1,18 +1,7 @@
 import json
 import re
 
-MODEL = "gemini-2.5-flash"
-
-
-def _get_api_key() -> str:
-    from viko.config import get_gemini_key
-    return get_gemini_key()
-
-
-def _generate(prompt: str) -> str:
-    from google import genai
-    client = genai.Client(api_key=_get_api_key())
-    return client.models.generate_content(model=MODEL, contents=prompt).text
+from viko.self_engineer.llm import generate_text as _generate
 
 
 def _strip_fences(text: str) -> str:

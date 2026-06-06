@@ -1,6 +1,7 @@
 python-dotenv
 sounddevice
 google-genai
+anthropic
 google-generativeai
 pillow
 requests
