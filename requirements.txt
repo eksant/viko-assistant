@@ -25,3 +25,6 @@ openpyxl
 pydub
 python-pptx
 PyQt6
+chromadb
+PyQt6-WebEngine
+pytest
