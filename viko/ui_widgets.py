@@ -157,3 +157,149 @@ def _ftr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
     copy = "© VIKO INDUSTRIES"
     fm2 = QFontMetrics(p.font())
     p.drawText(x2 - fm2.horizontalAdvance(copy), cy + 7, copy)
+
+
+class MetricCard(QWidget):
+    def __init__(self, label: str, val_fn, color=None, parent=None):
+        super().__init__(parent)
+        self._label  = label
+        self._val_fn = val_fn   # () -> (float 0..1, str)
+        self._col    = color or PRI
+        self._tick   = 0
+        self.setFixedHeight(78)
+        t = QTimer(self); t.timeout.connect(self._step); t.start(60)
+
+    def _step(self): self._tick += 1; self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W, H = self.width(), self.height()
+        val, text = self._val_fn()
+        p.setPen(QPen(_c(0, 212, 255, 28), 1))
+        p.setBrush(QBrush(_c(8, 19, 34, 215)))
+        p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
+
+        r = 23; acx = 36; acy = H // 2
+        rect = QRectF(acx - r, acy - r, r * 2, r * 2)
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.setPen(QPen(pri(26), 2.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        p.drawArc(rect, int(210 * 16), int(-240 * 16))
+        cg = QConicalGradient(QPointF(acx, acy), 150)
+        cg.setColorAt(0, self._col); cg.setColorAt(1, _c(0, 212, 255, 55))
+        p.setPen(QPen(QBrush(cg), 2.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        p.drawArc(rect, int(210 * 16), int(-240 * val * 16))
+
+        p.setFont(F(9, True)); p.setPen(self._col)
+        fm = QFontMetrics(p.font())
+        p.drawText(acx - fm.horizontalAdvance(text) // 2, acy + 5, text)
+
+        p.setFont(F(7)); p.setPen(DIM)
+        p.drawText(acx + r + 10, acy - 10, self._label)
+
+        bx = acx + r + 10; by = acy + 4; bw = W - bx - 10; bh = 4
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(pri(20)))
+        p.drawRoundedRect(QRectF(bx, by, bw, bh), 2, 2)
+        lg = QLinearGradient(bx, 0, bx + bw, 0)
+        lg.setColorAt(0, pri(135)); lg.setColorAt(1, self._col)
+        p.setBrush(QBrush(lg))
+        p.drawRoundedRect(QRectF(bx, by, bw * val, bh), 2, 2)
+        p.end()
+
+
+class SystemStatusCard(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._tick = 0
+        self._online = True   # set via set_online(bool)
+        self.setFixedHeight(56)
+        t = QTimer(self); t.timeout.connect(self._step); t.start(60)
+
+    def set_online(self, online: bool):
+        self._online = online; self.update()
+
+    def _step(self): self._tick += 1; self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W, H = self.width(), self.height()
+        p.setPen(QPen(pri(28), 1))
+        p.setBrush(QBrush(_c(8, 19, 34, 215)))
+        p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
+
+        p.setFont(F(7)); p.setPen(DIM)
+        p.drawText(10, 16, "SYSTEM STATUS")
+
+        col_fn = suc if self._online else (lambda a=255: _c(255, 68, 68, a))
+        lbl_txt = "ONLINE" if self._online else "OFFLINE"
+
+        da = int(210 + 45 * math.sin(self._tick * 0.10))
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(col_fn(da)))
+        p.drawEllipse(QRectF(10, 23, 10, 10))
+        pr_r = 7 + 3 * math.sin(self._tick * 0.10)
+        pa   = int(80 + 60 * abs(math.sin(self._tick * 0.10)))
+        p.setPen(QPen(col_fn(pa), 0.8)); p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawEllipse(QPointF(15, 28), pr_r, pr_r)
+
+        p.setFont(F(11, True)); p.setPen(col_fn())
+        p.drawText(27, 35, lbl_txt)
+
+        p.setFont(F(7)); p.setPen(pri(110))
+        p.drawText(10, H - 8, "B.1.0.0")
+        p.setFont(F(7)); p.setPen(pri(65))
+        p.drawText(W // 2, H - 8, "GEMINI API")
+        p.end()
+
+
+class WorldMapWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._tick = 0
+        self.setFixedHeight(116)
+        t = QTimer(self); t.timeout.connect(self._step); t.start(50)
+
+    def _step(self): self._tick += 1; self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W, H = self.width(), self.height()
+        lbl_h = 13; mx = 2; my = lbl_h; mh = H - my - 10
+
+        def proj(lon, lat):
+            x = mx + (lon + 180) / 360 * (W - 2 * mx)
+            y = my + (90 - lat) / 180 * mh
+            return QPointF(x, y)
+
+        p.setPen(QPen(pri(10), 0.5))
+        for lon in range(-180, 181, 45):
+            p.drawLine(proj(lon, 90), proj(lon, -90))
+        for lat in range(-60, 61, 30):
+            p.drawLine(proj(-180, lat), proj(180, lat))
+        p.setPen(QPen(pri(20), 0.6, Qt.PenStyle.DashLine))
+        p.drawLine(proj(-180, 0), proj(180, 0))
+
+        for poly in _WORLD_POLYS:
+            path = QPainterPath()
+            for i, (lon, lat) in enumerate(poly):
+                pt = proj(lon, lat)
+                if i == 0: path.moveTo(pt)
+                else:       path.lineTo(pt)
+            path.closeSubpath()
+            p.setBrush(QBrush(pri(12))); p.setPen(QPen(pri(65), 0.7))
+            p.drawPath(path)
+
+        kl = proj(101.69, 3.14)
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(AMB))
+        p.drawEllipse(kl, 3.2, 3.2)
+        pr_r = 5.5 + 3.5 * math.sin(self._tick * 0.13)
+        pa   = int(160 + 80 * math.sin(self._tick * 0.13))
+        p.setPen(QPen(amb(pa // 2), 0.9)); p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawEllipse(kl, pr_r, pr_r)
+
+        p.setFont(F(7)); p.setPen(DIM)
+        p.drawText(0, 11, "LOCATION  TRACKING")
+        p.setFont(F(7)); p.setPen(amb(175))
+        p.drawText(0, H, "03°08′N  101°42′E")
+        p.end()
