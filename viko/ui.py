@@ -24,6 +24,7 @@ from viko.ui_widgets import (
     FloatingArc, _hdr_draw, _ftr_draw,
     HudCanvas, LeftPanel, RightMetricsPanel, ActivityPanel,
 )
+from viko.config import is_configured, get_gemini_key
 
 
 # ─── System Metrics ───────────────────────────────────────────────────────────
@@ -196,11 +197,19 @@ class MainWindow(QMainWindow):
                                 on_click=self._toggle_panel, state=self._ui_state)
         vlay.addWidget(self._ftr)
 
-        # Setup overlay
-        self._overlay = SetupOverlay(root)
-        self._overlay.setGeometry(0, 0, WIN_W, WIN_H)
-        self._overlay.done.connect(self._on_api_key)
-        self._overlay.show()
+        # Setup overlay — skip if key already in .env
+        if is_configured():
+            self._overlay = None
+            self._ready = True
+            import os
+            os.environ.setdefault("GEMINI_API_KEY", get_gemini_key())
+            QTimer.singleShot(200, lambda: self._apply_state("LISTENING"))
+            QTimer.singleShot(250, lambda: self._activity.append_log("SYS: Viko online."))
+        else:
+            self._overlay = SetupOverlay(root)
+            self._overlay.setGeometry(0, 0, WIN_W, WIN_H)
+            self._overlay.done.connect(self._on_api_key)
+            self._overlay.show()
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
