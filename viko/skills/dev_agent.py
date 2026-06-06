@@ -15,18 +15,13 @@ def get_base_dir():
 BASE_DIR         = get_base_dir()
 PROJECTS_DIR     = Path.home() / "Desktop" / "VikoProjects"
 MAX_FIX_ATTEMPTS = 5
-MODEL_PLANNER    = "gemini-2.5-flash"
-MODEL_WRITER     = "gemini-2.5-flash"
+from viko.self_engineer.llm import generate_text as _llm
 
-def _get_api_key() -> str:
-    from viko.config import get_gemini_key
-    return get_gemini_key()
+class _Response:
+    def __init__(self, text): self.text = text
 
-
-def _generate(prompt, model_name: str = MODEL_PLANNER):
-    from google import genai
-    client = genai.Client(api_key=_get_api_key())
-    return client.models.generate_content(model=model_name, contents=prompt)
+def _generate(prompt, model_name: str = None):
+    return _Response(_llm(prompt))
 
 
 def _strip_fences(text: str) -> str:

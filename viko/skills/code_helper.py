@@ -16,17 +16,19 @@ MAX_BUILD_ATTEMPTS = 3
 GEMINI_MODEL       = "gemini-2.5-flash"
 
 
+from viko.self_engineer.llm import generate_text as _llm
+
+class _Response:
+    def __init__(self, text): self.text = text
+
 def _get_api_key() -> str:
     from viko.config import get_gemini_key
     return get_gemini_key()
 
-
 def _get_gemini(model: str = GEMINI_MODEL):
-    from google import genai
-    client = genai.Client(api_key=_get_api_key())
     class _Wrap:
         def generate_content(self, prompt):
-            return client.models.generate_content(model=model, contents=prompt)
+            return _Response(_llm(prompt))
     return _Wrap()
 
 
