@@ -1,6 +1,6 @@
 # viko/ui.py
 from __future__ import annotations
-import math, sys, time, threading
+import math, sys, time, threading, socket
 from pathlib import Path
 
 import psutil
@@ -30,13 +30,23 @@ from viko.config import is_configured, get_gemini_key
 # ─── System Metrics ───────────────────────────────────────────────────────────
 class _SysMetrics:
     def __init__(self):
-        self._data = {"cpu": 0.0, "mem": 0.0, "disk": 0.0, "net": 0.0}
+        self._data     = {"cpu": 0.0, "mem": 0.0, "disk": 0.0, "net": 0.0, "latency": 0}
         self._prev_net = psutil.net_io_counters()
+        self._ping_ctr = 0
         t = threading.Thread(target=self._run, daemon=True)
         t.start()
 
     def snapshot(self) -> dict:
         return dict(self._data)
+
+    def _measure_latency(self) -> int:
+        try:
+            t0 = time.perf_counter()
+            s  = socket.create_connection(("8.8.8.8", 53), timeout=3)
+            s.close()
+            return max(1, int((time.perf_counter() - t0) * 1000))
+        except Exception:
+            return self._data["latency"] or 999
 
     def _run(self):
         while True:
@@ -47,10 +57,13 @@ class _SysMetrics:
                     self._data["disk"] = psutil.disk_usage("/").percent / 100
                 except Exception:
                     self._data["disk"] = 0.5
-                cur = psutil.net_io_counters()
+                cur  = psutil.net_io_counters()
                 sent = (cur.bytes_sent - self._prev_net.bytes_sent) / 1_000_000
                 self._data["net"]  = min(1.0, sent / 10)
                 self._prev_net = cur
+                self._ping_ctr += 1
+                if self._ping_ctr % 15 == 1:   # measure every ~15s
+                    self._data["latency"] = self._measure_latency()
             except Exception:
                 time.sleep(2)
 
@@ -106,6 +119,7 @@ class SetupOverlay(QWidget):
 class MainWindow(QMainWindow):
     _log_sig   = pyqtSignal(str)
     _state_sig = pyqtSignal(str)
+    _loc_sig   = pyqtSignal(float, float, str)   # lat, lon, label
 
     on_text_command = None   # set by VikoUI / viko.py
 
@@ -122,9 +136,11 @@ class MainWindow(QMainWindow):
 
         self._log_sig.connect(self._on_log)
         self._state_sig.connect(self._apply_state)
+        self._loc_sig.connect(self._on_location)
 
         self._build()
         self._setup_shortcuts()
+        self._start_live_feeds()
 
     # ── Layout ─────────────────────────────────────────────────────────────
     def _build(self):
@@ -265,6 +281,44 @@ class MainWindow(QMainWindow):
             self._overlay.hide(); self._overlay = None
         self._apply_state("LISTENING")
         self._activity.append_log("SYS: Initialised. Viko online.")
+
+    # ── Live data feeds ───────────────────────────────────────────────────
+    def _start_live_feeds(self):
+        # Latency: poll metrics snapshot every 5s and push to CommsCard
+        lat_timer = QTimer(self)
+        lat_timer.timeout.connect(self._push_latency)
+        lat_timer.start(5000)
+
+        # Location: fetch once from IP geolocation in background
+        t = threading.Thread(target=self._fetch_location, daemon=True)
+        t.start()
+
+    def _push_latency(self):
+        ms = self._metrics.snapshot().get("latency", 0)
+        if ms > 0:
+            self._right_metrics.set_latency(ms)
+
+    def _fetch_location(self):
+        try:
+            import urllib.request, json as _json
+            with urllib.request.urlopen("http://ip-api.com/json/", timeout=6) as r:
+                d = _json.loads(r.read())
+            lat   = float(d.get("lat", 3.14))
+            lon   = float(d.get("lon", 101.69))
+            city  = d.get("city", "")
+            country = d.get("countryCode", "")
+            # Format as degree-minute label
+            la_d, la_m = int(abs(lat)), int((abs(lat) % 1) * 60)
+            lo_d, lo_m = int(abs(lon)), int((abs(lon) % 1) * 60)
+            la_s = f"{la_d:02d}°{la_m:02d}′{'N' if lat >= 0 else 'S'}"
+            lo_s = f"{lo_d:03d}°{lo_m:02d}′{'E' if lon >= 0 else 'W'}"
+            label = f"{la_s}  {lo_s}"
+            self._loc_sig.emit(lat, lon, label)
+        except Exception:
+            pass   # keep default KL coordinates
+
+    def _on_location(self, lat: float, lon: float, label: str):
+        self._left.set_location(lat, lon, label)
 
 
 # ─── Public Facade (identical interface to old ui.py) ─────────────────────────

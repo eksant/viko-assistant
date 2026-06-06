@@ -256,8 +256,15 @@ class WorldMapWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._tick = 0
+        self._loc_lon   = 101.69
+        self._loc_lat   = 3.14
+        self._loc_label = "03°08′N  101°42′E"
         self.setFixedHeight(116)
         t = QTimer(self); t.timeout.connect(self._step); t.start(50)
+
+    def set_location(self, lat: float, lon: float, label: str):
+        self._loc_lat = lat; self._loc_lon = lon; self._loc_label = label
+        self.update()
 
     def _step(self): self._tick += 1; self.update()
 
@@ -290,18 +297,18 @@ class WorldMapWidget(QWidget):
             p.setBrush(QBrush(pri(12))); p.setPen(QPen(pri(65), 0.7))
             p.drawPath(path)
 
-        kl = proj(101.69, 3.14)
+        dot = proj(self._loc_lon, self._loc_lat)
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(AMB))
-        p.drawEllipse(kl, 3.2, 3.2)
+        p.drawEllipse(dot, 3.2, 3.2)
         pr_r = 5.5 + 3.5 * math.sin(self._tick * 0.13)
         pa   = int(160 + 80 * math.sin(self._tick * 0.13))
         p.setPen(QPen(amb(pa // 2), 0.9)); p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawEllipse(kl, pr_r, pr_r)
+        p.drawEllipse(dot, pr_r, pr_r)
 
         p.setFont(F(9)); p.setPen(DIM)
         p.drawText(0, 12, "LOCATION  TRACKING")
         p.setFont(F(9)); p.setPen(amb(175))
-        p.drawText(0, H - 1, "03°08′N  101°42′E")
+        p.drawText(0, H - 1, self._loc_label)
         p.end()
 
 
@@ -705,6 +712,7 @@ class LeftPanel(QWidget):
         lay.setSpacing(5)
 
         self._status_card = SystemStatusCard()
+        self._map         = WorldMapWidget()
 
         def _metric(key, scale=100):
             def fn():
@@ -712,7 +720,7 @@ class LeftPanel(QWidget):
                 return v, f"{int(v * scale)}%"
             return fn
 
-        lay.addWidget(WorldMapWidget())
+        lay.addWidget(self._map)
         lay.addWidget(self._status_card)
         lay.addWidget(MetricCard("CORE PROC", _metric("cpu"),  PRI))
         lay.addWidget(MetricCard("MEM ARRAY", _metric("mem"),  AMB))
@@ -721,6 +729,9 @@ class LeftPanel(QWidget):
 
     def set_online(self, online: bool):
         self._status_card.set_online(online)
+
+    def set_location(self, lat: float, lon: float, label: str):
+        self._map.set_location(lat, lon, label)
 
 
 class RightMetricsPanel(QWidget):
@@ -743,6 +754,8 @@ class RightMetricsPanel(QWidget):
         lay.addStretch()
 
     def inc_ops(self): self._sess.inc_ops()
+
+    def set_latency(self, ms: int): self._comms.set_latency(ms)
 
 
 class ActivityPanel(QWidget):
