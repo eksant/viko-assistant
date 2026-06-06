@@ -9,3 +9,6 @@ venv/
 *.egg-info/
 dist/
 build/
+
+# SelfEngineer backups
+viko/self_engineer/backups/
