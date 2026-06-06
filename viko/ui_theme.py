@@ -1,6 +1,5 @@
 # viko/ui_theme.py
 from __future__ import annotations
-import math
 from PyQt6.QtGui import QColor, QFont
 
 WIN_W, WIN_H = 1160, 740
