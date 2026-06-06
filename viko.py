@@ -10,9 +10,18 @@ from google.genai import types
 
 from viko.ui     import VikoUI
 from viko.memory import (
-    load_memory, update_memory, format_memory_for_prompt,
-    should_extract_memory, extract_memory
+    update_memory,
+    should_extract_memory, extract_memory, remember,
 )
+from viko.conversation import (
+    start_session as conv_start_session,
+    end_session   as conv_end_session,
+    save_message  as conv_save_message,
+    get_recent_messages,
+    summarize_session_async,
+)
+from viko.context_builder import build_system_context
+from viko.vector_store import index_message as vs_index_message
 
 from viko.skills.file_processor    import file_processor
 from viko.skills.flight_finder     import flight_finder
@@ -31,6 +40,12 @@ from viko.skills.dev_agent         import dev_agent
 from viko.skills.web_search        import web_search as web_search_action
 from viko.skills.computer_control  import computer_control
 from viko.skills.cmd_control       import cmd_control
+from viko.skills.browser_tool import (
+    navigate_browser, render_content,
+    take_screenshot as browser_screenshot,
+    get_page_content, browser_interact, visual_control,
+)
+from viko.skills.self_update import self_update
 
 
 def get_base_dir():
@@ -217,8 +232,9 @@ TOOL_DECLARATIONS = [
     {
         "name": "browser_control",
         "description": (
-            "Controls the web browser. Use for: opening websites, searching the web, "
-            "clicking elements, filling forms, scrolling, any web-based task."
+            "Opens the EXTERNAL system browser (Chrome/Safari/Firefox) outside VIKO. "
+            "Use ONLY when the user explicitly asks to open the external/system browser. "
+            "For ALL other web tasks — navigation, search, browsing — use navigate_browser instead."
         ),
         "parameters": {
             "type": "OBJECT",
@@ -285,6 +301,35 @@ TOOL_DECLARATIONS = [
                 "timeout":     {"type": "INTEGER", "description": "Execution timeout in seconds (default: 30)"},
             },
             "required": ["action"]
+        }
+    },
+    {
+        "name": "self_update",
+        "description": (
+            "Modifikasi kode VIKO sendiri: tambah skill baru, fix bug, ubah perilaku atau "
+            "prompt, modifikasi UI, atau restore backup perubahan sebelumnya. "
+            "Gunakan action='confirm' saat user menyetujui plan atau restart. "
+            "Gunakan action='restore' untuk kembalikan perubahan terakhir. "
+            "Gunakan action='history' untuk lihat log perubahan."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "intent": {
+                    "type": "STRING",
+                    "description": "Deskripsi lengkap perubahan yang diminta user"
+                },
+                "target_files": {
+                    "type": "ARRAY",
+                    "items": {"type": "STRING"},
+                    "description": "Opsional: file spesifik yang relevan, e.g. ['viko/skills/browser_tool.py']"
+                },
+                "action": {
+                    "type": "STRING",
+                    "description": "create_skill | fix_bug | modify_prompt | modify_ui | restore | history | confirm | cancel"
+                }
+            },
+            "required": ["intent", "action"]
         }
     },
     {
@@ -417,6 +462,99 @@ TOOL_DECLARATIONS = [
         }
     },
     {
+        "name": "navigate_browser",
+        "description": (
+            "PRIMARY browser tool — selalu gunakan ini untuk SEMUA tugas web. "
+            "Membuka URL atau halaman pencarian di embedded browser VIKO (di dalam jendela VIKO). "
+            "Gunakan untuk: membuka website, mencari sesuatu di web, navigasi halaman, "
+            "melihat konten online. Jangan gunakan browser_control untuk tugas web biasa."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "url": {"type": "STRING", "description": "URL lengkap (https://...) atau domain (github.com)"},
+            },
+            "required": ["url"]
+        }
+    },
+    {
+        "name": "render_content",
+        "description": (
+            "Generate HTML dan tampilkan langsung di browser VIKO. "
+            "Gunakan untuk: wireframe, presentasi, dashboard, dokumen, atau output visual apapun. "
+            "AI membuat HTML, lalu disimpan ke workspace/ dan otomatis dibuka di browser."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "content":  {"type": "STRING", "description": "Konten HTML lengkap yang akan di-render"},
+                "filename": {"type": "STRING", "description": "Nama file, misal login-wireframe.html"},
+                "category": {"type": "STRING", "description": "wireframes | presentations | documents | code"},
+            },
+            "required": ["content", "filename"]
+        }
+    },
+    {
+        "name": "browser_screenshot",
+        "description": "Ambil screenshot halaman browser VIKO saat ini.",
+        "parameters": {"type": "OBJECT", "properties": {}, "required": []}
+    },
+    {
+        "name": "get_page_content",
+        "description": "Baca teks halaman browser VIKO saat ini untuk dianalisis AI.",
+        "parameters": {"type": "OBJECT", "properties": {}, "required": []}
+    },
+    {
+        "name": "browser_interact",
+        "description": (
+            "Kontrol embedded browser VIKO — click, type, scroll, baca konten, jalankan JS. "
+            "Gunakan ini (BUKAN browser_control) untuk semua interaksi dengan halaman yang "
+            "sedang terbuka di browser internal VIKO. "
+            "Actions: click (klik elemen), type (isi input), scroll (gulir halaman), "
+            "scroll_to (scroll ke elemen), get_text (ambil teks), get_links (daftar link), "
+            "submit (submit form), run_js (jalankan JavaScript bebas)."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action":    {"type": "STRING",  "description": "get_inputs | click | type | clear | scroll | scroll_to | get_text | get_links | submit | run_js"},
+                "selector":  {"type": "STRING",  "description": "CSS selector, e.g. '#first-name', 'input[name=email]'"},
+                "label":     {"type": "STRING",  "description": "Label/placeholder text to find input — e.g. 'First name', 'Search'. Use for type/clear/scroll_to when selector unknown."},
+                "text":      {"type": "STRING",  "description": "Text content to find clickable element (for click action)"},
+                "value":     {"type": "STRING",  "description": "Text to type into the input (for type action)"},
+                "direction": {"type": "STRING",  "description": "up or down (for scroll)"},
+                "amount":    {"type": "INTEGER", "description": "Pixels to scroll (default 400)"},
+                "code":      {"type": "STRING",  "description": "JavaScript code to run (for run_js action)"},
+            },
+            "required": ["action"]
+        }
+    },
+    {
+        "name": "visual_control",
+        "description": (
+            "Kontrol browser VIKO menggunakan koordinat layar via agent-browser CDP. "
+            "Lebih akurat dari browser_interact untuk klik visual (tombol ikon, canvas, dll). "
+            "Aktif setelah agent-browser running (~5s setelah browser dibuka). "
+            "Actions: click_xy (klik koordinat), scroll_xy (scroll koordinat), "
+            "type_text (ketik teks), key (tekan tombol keyboard), "
+            "screenshot (screenshot CDP), navigate (buka URL)."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action":  {"type": "STRING",  "description": "click_xy | scroll_xy | type_text | key | screenshot | navigate"},
+                "x":       {"type": "INTEGER", "description": "Koordinat X layar browser (untuk click_xy, scroll_xy)"},
+                "y":       {"type": "INTEGER", "description": "Koordinat Y layar browser (untuk click_xy, scroll_xy)"},
+                "deltaX":  {"type": "INTEGER", "description": "Delta scroll horizontal (default 0)"},
+                "deltaY":  {"type": "INTEGER", "description": "Delta scroll vertikal (default 400, negatif=naik)"},
+                "text":    {"type": "STRING",  "description": "Teks untuk di-type (action: type_text)"},
+                "key":     {"type": "STRING",  "description": "Tombol keyboard, e.g. Enter, Tab, Escape (action: key)"},
+                "url":     {"type": "STRING",  "description": "URL untuk navigasi (action: navigate)"},
+            },
+            "required": ["action"]
+        }
+    },
+    {
         "name": "shutdown_viko",
         "description": (
             "Shuts down the assistant completely. "
@@ -482,18 +620,30 @@ class VikoLive:
         self._is_speaking   = False
         self._speaking_lock = threading.Lock()
         self._last_active   = 0.0
+        self._session_id    = 0
         self.ui.on_text_command = self._on_text_command
+        self.ui.on_file_command = self._on_file_command
 
     def _on_text_command(self, text: str):
-        if not self._loop or not self.session:
+        if self.ui.paused:
             return
-        asyncio.run_coroutine_threadsafe(
+        self.ui.write_log(f"YOU: {text}")
+        if not self._loop or not self.session:
+            self.ui.write_log("SYS: Session not ready — try again in a moment.")
+            return
+        fut = asyncio.run_coroutine_threadsafe(
             self.session.send_client_content(
-                turns={"parts": [{"text": text}]},
-                turn_complete=True
+                turns={"role": "user", "parts": [{"text": text}]},
+                turn_complete=True,
             ),
-            self._loop
+            self._loop,
         )
+        def _on_done(f):
+            try:
+                f.result()
+            except Exception as exc:
+                self.ui.write_log(f"ERR: text send failed — {exc}")
+        fut.add_done_callback(_on_done)
 
     def set_speaking(self, value: bool):
         with self._speaking_lock:
@@ -514,6 +664,57 @@ class VikoLive:
             self._loop
         )
 
+    def _on_file_command(self, path: str):
+        """Called when user uploads a file. Images are sent as vision input."""
+        import mimetypes
+        from pathlib import Path as _P
+        p = _P(path)
+        mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
+        is_image = mime.startswith("image/")
+        size = p.stat().st_size
+        size_str = (f"{size//1_048_576}MB" if size >= 1_048_576
+                    else f"{size//1024}KB" if size >= 1024 else f"{size}B")
+        self.ui.write_log(f"FILE: {p.name} ({size_str}) → {'vision' if is_image else 'text'}")
+
+        if not self._loop or not self.session:
+            self.ui.write_log("SYS: Session not ready.")
+            return
+
+        if is_image:
+            # Send image data directly to Gemini Live vision
+            async def _send_img():
+                data = p.read_bytes()
+                await self.session.send_realtime_input(
+                    media=types.Blob(mime_type=mime, data=data)
+                )
+                await self.session.send_client_content(
+                    turns={"role": "user",
+                           "parts": [{"text": f"[Image uploaded: {p.name}] Analisa gambar ini."}]},
+                    turn_complete=True,
+                )
+            fut = asyncio.run_coroutine_threadsafe(_send_img(), self._loop)
+        else:
+            # Non-image: just notify with text so VIKO can ask what to do
+            msg = (
+                f"[FILE_UPLOADED] path={path} | name={p.name} | "
+                f"type={p.suffix.lstrip('.')} | size={size_str} | "
+                f"File '{p.name}' sudah diupload. Tanya mau diapakan."
+            )
+            fut = asyncio.run_coroutine_threadsafe(
+                self.session.send_client_content(
+                    turns={"role": "user", "parts": [{"text": msg}]},
+                    turn_complete=True,
+                ),
+                self._loop,
+            )
+
+        def _on_done(f):
+            try:
+                f.result()
+            except Exception as exc:
+                self.ui.write_log(f"ERR: file send failed — {exc}")
+        fut.add_done_callback(_on_done)
+
     def speak_error(self, tool_name: str, error: str):
         short = str(error)[:120]
         self.ui.write_log(f"ERR: {tool_name} — {short}")
@@ -522,8 +723,6 @@ class VikoLive:
     def _build_config(self) -> types.LiveConnectConfig:
         from datetime import datetime
 
-        memory     = load_memory()
-        mem_str    = format_memory_for_prompt(memory)
         sys_prompt = _load_system_prompt()
 
         now      = datetime.now()
@@ -534,9 +733,11 @@ class VikoLive:
             f"Use this to calculate exact times for reminders.\n\n"
         )
 
+        history_ctx = build_system_context()
+
         parts = [time_ctx]
-        if mem_str:
-            parts.append(mem_str)
+        if history_ctx:
+            parts.append(history_ctx)
         parts.append(sys_prompt)
 
         return types.LiveConnectConfig(
@@ -665,6 +866,34 @@ class VikoLive:
                 r = await loop.run_in_executor(None, lambda: flight_finder(parameters=args, player=self.ui))
                 result = r or "Done."
 
+            elif name == "navigate_browser":
+                r = await loop.run_in_executor(None, lambda: navigate_browser(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "render_content":
+                r = await loop.run_in_executor(None, lambda: render_content(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "browser_screenshot":
+                r = await loop.run_in_executor(None, lambda: browser_screenshot(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "get_page_content":
+                r = await loop.run_in_executor(None, lambda: get_page_content(parameters=args, player=self.ui))
+                result = r or "(kosong)"
+
+            elif name == "browser_interact":
+                r = await loop.run_in_executor(None, lambda: browser_interact(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "visual_control":
+                r = await loop.run_in_executor(None, lambda: visual_control(parameters=args, player=self.ui))
+                result = r or "Done."
+
+            elif name == "self_update":
+                r = await loop.run_in_executor(None, lambda: self_update(parameters=args, player=self.ui, speak=self.speak))
+                result = r or "Done."
+
             elif name == "shutdown_viko":
                 self.ui.write_log("SYS: Shutdown requested.")
                 self.speak("Goodbye.")
@@ -710,7 +939,7 @@ class VikoLive:
         def callback(indata, frames, time_info, status):
             with self._speaking_lock:
                 viko_speaking = self._is_speaking
-            if viko_speaking or self.ui.muted:
+            if viko_speaking or self.ui.muted or self.ui.paused:
                 return
             loop.call_soon_threadsafe(
                 self.out_queue.put_nowait,
@@ -781,6 +1010,32 @@ class VikoLive:
                             out_buf = []
 
                             if full_in and len(full_in) > 5:
+                                # Keyword trigger: "viko, ingat ini..."
+                                _lower = full_in.lower()
+                                if "ingat ini" in _lower:
+                                    _after = full_in[_lower.find("ingat ini") + 9:].strip().lstrip(":").strip()
+                                    if _after:
+                                        _key = f"note_{int(asyncio.get_event_loop().time())}"
+                                        threading.Thread(
+                                            target=remember,
+                                            args=(_key, _after, "notes"),
+                                            daemon=True
+                                        ).start()
+                                        self.speak("Oke, sudah saya ingat.")
+
+                                # Save to SQLite + ChromaDB in background
+                                _sid = self._session_id
+                                def _persist(user_txt=full_in, viko_txt=full_out, sid=_sid):
+                                    try:
+                                        mid = conv_save_message(sid, "user", user_txt)
+                                        vs_index_message(user_txt, "user", sid, mid)
+                                        if viko_txt:
+                                            mid2 = conv_save_message(sid, "viko", viko_txt)
+                                            vs_index_message(viko_txt, "viko", sid, mid2)
+                                    except Exception as _e:
+                                        print(f"[Memory] Persist failed: {_e}")
+                                threading.Thread(target=_persist, daemon=True).start()
+
                                 threading.Thread(
                                     target=_update_memory_async,
                                     args=(full_in, full_out),
@@ -809,18 +1064,31 @@ class VikoLive:
         except Exception:
             print("[Viko] Audio playback started")
 
+        # latency='high' gives PortAudio a larger internal ring-buffer (~200-500ms)
+        # so the device keeps playing even if asyncio is briefly delayed by tools.
         stream = sd.RawOutputStream(
             samplerate=RECEIVE_SAMPLE_RATE,
             channels=CHANNELS,
             dtype="int16",
-            blocksize=CHUNK_SIZE,
+            blocksize=0,       # let PortAudio choose optimal block size
+            latency="high",    # bigger internal buffer = stutter-resistant
         )
         stream.start()
         try:
             while True:
+                # Wait for first chunk
                 chunk = await self.audio_in_queue.get()
                 self.set_speaking(True)
-                await asyncio.to_thread(stream.write, chunk)
+                # Drain any queued chunks without waiting (batch write reduces
+                # asyncio round-trips and keeps PortAudio buffer fed)
+                chunks = [chunk]
+                while True:
+                    try:
+                        chunks.append(self.audio_in_queue.get_nowait())
+                    except asyncio.QueueEmpty:
+                        break
+                data = b"".join(chunks)
+                await asyncio.to_thread(stream.write, data)
                 if self.audio_in_queue.empty():
                     self.set_speaking(False)
         except Exception as e:
@@ -848,8 +1116,18 @@ class VikoLive:
             http_options={"api_version": "v1beta"}
         )
 
+        # Boot phase 1: loading memory + context
+        self.ui.set_boot_progress(0.1, "LOADING MEMORY...")
+        await asyncio.sleep(0.05)
+        self.ui.set_boot_progress(0.35, "BUILDING CONTEXT...")
+        await asyncio.sleep(0.05)
+
+        _first_connect = True
+
         while True:
             try:
+                if _first_connect:
+                    self.ui.set_boot_progress(0.6, "CONNECTING...")
                 print("[Viko] Connecting...")
                 self.ui.set_state("THINKING")
                 config = self._build_config()
@@ -860,9 +1138,21 @@ class VikoLive:
                 ):
                     self.session        = session
                     self._loop          = asyncio.get_event_loop()
-                    self.audio_in_queue = asyncio.Queue()
+                    self.audio_in_queue = asyncio.Queue(maxsize=200)  # ~200 chunks × 42ms = ~8s headroom
                     self.out_queue      = asyncio.Queue(maxsize=10)
                     self._last_active   = asyncio.get_event_loop().time()
+
+                    # Start a new SQLite session
+                    try:
+                        self._session_id = conv_start_session()
+                        print(f"[Conversation] Session started: {self._session_id}")
+                    except Exception as _e:
+                        print(f"[Conversation] Session start failed: {_e}")
+                        self._session_id = 0
+
+                    if _first_connect:
+                        self.ui.set_boot_progress(1.0, "ONLINE")
+                        _first_connect = False
 
                     print("[Viko] Connected.")
                     self.ui.set_state("LISTENING")
@@ -878,6 +1168,15 @@ class VikoLive:
                 print(f"[Viko] {e}")
                 traceback.print_exc()
 
+            # End session + trigger background summarization
+            if self._session_id:
+                try:
+                    conv_end_session(self._session_id)
+                    msgs = get_recent_messages(30)
+                    summarize_session_async(self._session_id, msgs)
+                except Exception as _e:
+                    print(f"[Conversation] Session end failed: {_e}")
+
             self.set_speaking(False)
             self.ui.set_state("THINKING")
             print("[Viko] Reconnecting in 3s...")
@@ -886,6 +1185,7 @@ class VikoLive:
 
 def main():
     ui = VikoUI("face.png")
+    ui.set_boot_progress(0.0, "INITIALIZING...")
 
     def runner():
         ui.wait_for_api_key()
