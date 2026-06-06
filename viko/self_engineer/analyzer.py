@@ -89,6 +89,15 @@ def build_context(intent: str, target_files: list[str] | None = None, action: st
         if not target_files:
             for rel in VIKO_MANIFEST:
                 _add(rel)
+        # Include recent log entries so LLM can see actual error messages
+        try:
+            from viko.logger import read_recent
+            recent_logs = read_recent(100)
+            if recent_logs and "(no log file yet)" not in recent_logs:
+                files["viko/logs/viko.log (recent)"] = recent_logs
+                total_tokens += _chars_to_tokens(len(recent_logs))
+        except Exception:
+            pass
 
     elif category == "modify_prompt":
         _add("viko/prompt.txt")

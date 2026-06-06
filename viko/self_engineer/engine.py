@@ -3,6 +3,10 @@ import sys
 import threading
 from pathlib import Path
 
+from viko.logger import get_logger
+
+logger = get_logger("self_engineer.engine")
+
 
 def _get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -83,6 +87,7 @@ class SelfEngineerEngine:
             return self._run_inner(intent, action, target_files, speak)
 
         if not self._lock.acquire(blocking=False):
+            logger.warning("Concurrent self_update rejected — pipeline busy")
             return "Sedang memproses permintaan sebelumnya. Tunggu sebentar ya, nanti lanjut."
 
         try:
@@ -128,18 +133,22 @@ class SelfEngineerEngine:
             _clear_pending_plan()
             return self._execute_plan(plan, context, speak)
 
+        logger.info("Starting self_update: action=%s intent=%s", action, intent[:80])
         try:
             context = analyzer.build_context(intent, target_files, action)
         except Exception as e:
+            logger.error("Analyzer failed: %s", e)
             return f"Gagal menganalisis codebase: {e}"
 
         try:
             plan = planner.generate(context)
         except Exception as e:
+            logger.error("Planner failed: %s", e)
             return f"Gagal membuat plan: {e}"
 
         _save_pending_plan(plan, context)
         summary = plan.get("summary_for_voice", "Saya akan melakukan perubahan pada kode.")
+        logger.info("Plan ready: %s", summary)
         return f"{summary} Lanjutkan?"
 
     def _execute_plan(self, plan: dict, context: dict, speak=None) -> str:
@@ -148,6 +157,7 @@ class SelfEngineerEngine:
         try:
             changes = generator.generate(plan, context)
         except Exception as e:
+            logger.error("Generator failed: %s", e)
             return f"Gagal generate kode: {e}"
 
         files_changed = [c["file"] for c in changes if c["action"] in ("patch", "overwrite")]
@@ -155,21 +165,26 @@ class SelfEngineerEngine:
 
         try:
             backup_id = backup.save(plan, files_changed, files_created)
+            logger.info("Backup saved: %s (changed=%s created=%s)", backup_id, files_changed, files_created)
         except Exception as e:
+            logger.error("Backup failed: %s", e)
             return f"Gagal membuat backup: {e}. Operasi dibatalkan."
 
         try:
             applied = generator.apply_changes(changes)
-            print(f"[SelfEngineer] Applied: {applied}")
+            logger.info("Changes applied: %s", applied)
         except Exception as e:
+            logger.error("Apply failed, rolling back: %s", e)
             backup.restore(backup_id)
             return f"Gagal apply perubahan: {e}. Perubahan dikembalikan."
 
         result = tester.run(plan, changes)
         if not result.passed:
+            logger.error("Tests failed, rolling back: %s", result.message)
             backup.restore(backup_id)
             return f"Test gagal: {result.message}. Perubahan dikembalikan ke backup."
 
+        logger.info("Tests passed: %s", result.message)
         _save_pending_restart(changes, backup_id)
         return f"Test berhasil: {result.message}. Restart VIKO sekarang?"
 

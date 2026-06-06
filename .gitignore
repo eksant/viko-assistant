@@ -28,6 +28,7 @@ workspace/**
 # Logs
 *.log
 /tmp/viko*.log
+viko/logs/
 
 # SelfEngineer backups
 viko/self_engineer/backups/
