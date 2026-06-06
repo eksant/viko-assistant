@@ -1,4 +1,4 @@
-# VIKO — Personal AI Voice Assistant
+# VIKO — Virtual Intelligent Knowledge Operator
 
 VIKO is a personal AI voice assistant built with PyQt6 and Google Gemini Live API. It listens to your voice, executes tools, and can even modify its own source code on command.
 
