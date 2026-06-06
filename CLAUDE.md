@@ -81,8 +81,16 @@ Backup is mandatory before any file change. Automatic rollback on test failure.
 |---|---|
 | `viko.py` | Main agent, tool routing, Gemini Live session |
 | `viko/prompt.txt` | System prompt — VIKO's personality and tool rules |
-| `viko/config.py` | API key loading from `.env` |
-| `viko/ui.py` | PyQt6 main window |
+| `viko/core/config.py` | API key loading from `.env` |
+| `viko/core/logger.py` | Structured logging — `get_logger()`, `read_recent()` |
+| `viko/core/client.py` | LLM client (OpenRouter / Gemini wrapper) |
+| `viko/core/memory.py` | Long-term memory extraction and storage |
+| `viko/core/conversation.py` | Session message history |
+| `viko/core/context_builder.py` | Builds Gemini system context |
+| `viko/ui/window.py` | PyQt6 main window |
+| `viko/ui/theme.py` | Colors, fonts, stylesheet constants |
+| `viko/ui/widgets.py` | HUD canvas, panels, chat bubbles |
+| `viko/ui/browser_panel.py` | Embedded Chromium browser widget |
 | `viko/self_engineer/engine.py` | Self-modification orchestrator |
 | `viko/self_engineer/llm.py` | LLM router (Claude / Gemini) |
 | `viko/skills/self_update.py` | Voice-facing self-modification skill |

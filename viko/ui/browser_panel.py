@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore    import QWebEnginePage
 
-from viko.ui_theme import PRI, AMB, F
+from viko.ui.theme import PRI, AMB, F
 
 CDP_PORT = int(os.environ.get("VIKO_CDP_PORT", "9222"))
 
@@ -272,7 +272,7 @@ class BrowserPanel(QWidget):
 
     # ── Slots ─────────────────────────────────────────────────────────────
     def _go_home(self):
-        from viko.workspace import WORKSPACE
+        from viko.core.workspace import WORKSPACE
         self.navigate((WORKSPACE / "documents").as_uri())
 
     def _on_url_entered(self):

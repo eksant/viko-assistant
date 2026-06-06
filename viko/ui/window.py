@@ -20,17 +20,17 @@ from PyQt6.QtWidgets import (
     QDialog, QMenu,
 )
 
-from viko.ui_theme   import (
+from viko.ui.theme   import (
     PRI, AMB, TXT,
     pri, F,
     WIN_W, WIN_H, HDR_H, FTR_H, RIGHT_W,
 )
-from viko.ui_widgets import (
+from viko.ui.widgets import (
     FloatingArc, _hdr_draw, _ftr_draw,
     HudCanvas, LeftPanel, RightMetricsPanel, ActivityPanel, BootScreen,
 )
-from viko.browser_panel import BrowserPanel
-from viko.config import is_configured, get_gemini_key
+from viko.ui.browser_panel import BrowserPanel
+from viko.core.config import is_configured, get_gemini_key
 
 
 # ─── System Metrics ───────────────────────────────────────────────────────────
@@ -414,7 +414,7 @@ class MainWindow(QMainWindow):
         if action == browser_act:
             self._toggle_browser(True)
         elif action == ws_act:
-            from viko.workspace import WORKSPACE
+            from viko.core.workspace import WORKSPACE
             self._browser.navigate(WORKSPACE.as_uri())
             self._toggle_browser(True)
 
@@ -438,7 +438,7 @@ class MainWindow(QMainWindow):
         """)
         # Auto-start agent-browser in background when browser becomes visible
         if visible:
-            from viko.agent_browser import get_server
+            from viko.ui.agent_browser import get_server
             get_server().auto_start_in_background()
 
     @pyqtSlot(bool)
@@ -469,7 +469,7 @@ class MainWindow(QMainWindow):
             self._screenshot_q.get_nowait()
         except _queue.Empty:
             pass
-        from viko.workspace import WORKSPACE, ensure_dirs
+        from viko.core.workspace import WORKSPACE, ensure_dirs
         ensure_dirs()
         px  = self._browser.grab()
         out = WORKSPACE / "documents" / "screenshot_latest.png"

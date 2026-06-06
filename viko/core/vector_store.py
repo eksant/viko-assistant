@@ -32,7 +32,7 @@ def _make_ef() -> Any:
     """Build the embedding function: Gemini first, fallback to default."""
     try:
         import google.genai as genai
-        from viko.config import get_gemini_key
+        from viko.core.config import get_gemini_key
 
         key = get_gemini_key()
 

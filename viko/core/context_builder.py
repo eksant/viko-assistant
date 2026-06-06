@@ -5,8 +5,8 @@ Builds context strings and initial conversation turns for Gemini Live sessions
 from stored conversation history and long-term memory.
 """
 
-from viko.conversation import get_recent_messages, get_recent_summaries
-from viko.memory import load_memory, format_memory_for_prompt
+from viko.core.conversation import get_recent_messages, get_recent_summaries
+from viko.core.memory import load_memory, format_memory_for_prompt
 
 
 def build_system_context() -> str:

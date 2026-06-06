@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QLineEdit, QPushButton,
 )
 
-from viko.ui_theme import (
+from viko.ui.theme import (
     _c, BG, DIM, PRI, AMB, SUC,
     pri, amb, suc, F,
     LEFT_W, RIGHT_W, _WORLD_POLYS,

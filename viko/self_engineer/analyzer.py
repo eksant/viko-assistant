@@ -11,17 +11,19 @@ def _get_base_dir() -> Path:
 BASE_DIR = _get_base_dir()
 
 VIKO_MANIFEST = {
-    "viko.py":                "Entry point: imports all skills, TOOL_DECLARATIONS list, _execute_tool handler",
-    "viko/prompt.txt":        "System prompt: VIKO's personality, tool usage rules, routing rules",
-    "viko/config.py":         "Config: API keys, settings",
-    "viko/memory.py":         "Memory: extract and store facts from conversations",
-    "viko/ui.py":             "UI: main window, PyQt6 widgets, browser panel toggle",
-    "viko/ui_theme.py":       "UI theme: colors, fonts, stylesheet",
-    "viko/ui_widgets.py":     "UI widgets: activity panel, chat bubbles",
-    "viko/conversation.py":   "Conversation: session management, message history",
-    "viko/context_builder.py":"Context builder: builds system context for Gemini",
-    "viko/vector_store.py":   "Vector store: semantic search over messages",
-    "viko/workspace.py":      "Workspace: file storage for browser-rendered content",
+    "viko.py":                      "Entry point: imports all skills, TOOL_DECLARATIONS list, _execute_tool handler",
+    "viko/prompt.txt":              "System prompt: VIKO's personality, tool usage rules, routing rules",
+    "viko/core/config.py":          "Config: API keys, settings",
+    "viko/core/logger.py":          "Logging: structured RotatingFileHandler, get_logger(), read_recent()",
+    "viko/core/client.py":          "LLM client: OpenRouter/Gemini API wrapper",
+    "viko/core/memory.py":          "Memory: extract and store facts from conversations",
+    "viko/core/conversation.py":    "Conversation: session management, message history",
+    "viko/core/context_builder.py": "Context builder: builds system context for Gemini",
+    "viko/core/vector_store.py":    "Vector store: semantic search over messages",
+    "viko/core/workspace.py":       "Workspace: file storage for browser-rendered content",
+    "viko/ui/window.py":            "UI: main window, PyQt6 widgets, browser panel toggle",
+    "viko/ui/theme.py":             "UI theme: colors, fonts, stylesheet",
+    "viko/ui/widgets.py":           "UI widgets: activity panel, chat bubbles",
 }
 
 SKILL_TEMPLATES = [
@@ -91,7 +93,7 @@ def build_context(intent: str, target_files: list[str] | None = None, action: st
                 _add(rel)
         # Include recent log entries so LLM can see actual error messages
         try:
-            from viko.logger import read_recent
+            from viko.core.logger import read_recent
             recent_logs = read_recent(100)
             if recent_logs and "(no log file yet)" not in recent_logs:
                 files["viko/logs/viko.log (recent)"] = recent_logs

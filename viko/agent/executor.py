@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from typing import Callable
 
-from viko.logger import get_logger
+from viko.core.logger import get_logger
 from viko.agent.planner  import create_plan, replan
 from viko.agent.recovery import analyze_error, generate_fix, ErrorDecision
 

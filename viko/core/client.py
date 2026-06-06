@@ -12,7 +12,7 @@ logger = logging.getLogger("llm_client")
 
 
 def _load_api_key() -> str:
-    from viko.config import get_openrouter_key
+    from viko.core.config import get_openrouter_key
     return get_openrouter_key()
 
 

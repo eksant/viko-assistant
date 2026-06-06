@@ -33,7 +33,7 @@ _BASE         = _base_dir()
 _MEMORY_PATH  = _BASE / "memory" / "long_term.json"
 
 def _get_os() -> str:
-    from viko.config import get_os
+    from viko.core.config import get_os
     return get_os()
 
 _SAFE_SCREENSHOT_ROOTS = (
@@ -289,7 +289,7 @@ def _focus_window(title: str) -> str:
 def _screen_find(description: str) -> tuple[int, int] | None:
     try:
         import base64
-        from viko.client import client
+        from viko.core.client import client
 
         _require_pyautogui()
         w, h  = pyautogui.size()

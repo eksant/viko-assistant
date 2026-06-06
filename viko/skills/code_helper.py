@@ -22,7 +22,7 @@ class _Response:
     def __init__(self, text): self.text = text
 
 def _get_api_key() -> str:
-    from viko.config import get_gemini_key
+    from viko.core.config import get_gemini_key
     return get_gemini_key()
 
 def _get_gemini(model: str = GEMINI_MODEL):

@@ -31,7 +31,7 @@ def render_content(parameters: dict, player=None) -> str:
         return "Error: content is required."
     if not filename.endswith(".html"):
         filename += ".html"
-    from viko.workspace import save_file, file_url
+    from viko.core.workspace import save_file, file_url
     path = save_file(content, filename, category)
     url  = file_url(path)
     if player and hasattr(player, "set_browser_url"):
@@ -373,7 +373,7 @@ def visual_control(parameters: dict, player=None) -> str:
 
     Actions: click_xy, scroll_xy, type_text, key, screenshot
     """
-    from viko.agent_browser import get_server
+    from viko.ui.agent_browser import get_server
 
     action = parameters.get("action", "").strip()
     server = get_server()

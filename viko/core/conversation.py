@@ -252,7 +252,7 @@ def summarize_session_async(session_id: int, messages: list[dict]) -> None:
 
     def _run() -> None:
         try:
-            from viko.client import client
+            from viko.core.client import client
             if not messages:
                 return
             convo_text = "\n".join(

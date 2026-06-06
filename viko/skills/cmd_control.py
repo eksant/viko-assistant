@@ -16,7 +16,7 @@ def _get_shell() -> tuple[str, list[str]]:
 
 def _interpret_task(task: str) -> str:
     try:
-        from viko.client import client
+        from viko.core.client import client
         os_name, _ = _get_shell()
         result = client.chat(
             f"Convert this natural language task to a shell command for {os_name}.\n"

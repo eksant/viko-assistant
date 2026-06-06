@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from enum import Enum
 
-from viko.logger import get_logger
+from viko.core.logger import get_logger
 from viko.self_engineer.llm import generate_text
 
 logger = get_logger("agent.recovery")

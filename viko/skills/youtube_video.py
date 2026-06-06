@@ -21,7 +21,7 @@ try:
 except ImportError:
     _TRANSCRIPT_OK = False
 
-from viko.config import get_os, is_windows, is_mac, is_linux
+from viko.core.config import get_os, is_windows, is_mac, is_linux
 
 
 HEADERS = {
@@ -140,7 +140,7 @@ def _get_transcript(video_id: str) -> str | None:
 
 
 def _summarize_with_gemini(transcript: str, video_url: str) -> str:
-    from viko.client import client
+    from viko.core.client import client
 
     max_chars = 80000
     truncated = transcript[:max_chars] + ("..." if len(transcript) > max_chars else "")

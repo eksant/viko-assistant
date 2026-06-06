@@ -3,7 +3,7 @@ import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from viko.config import is_windows, is_mac, is_linux
+from viko.core.config import is_windows, is_mac, is_linux
 
 _MONTH_MAP: dict[str, int] = {
 
@@ -45,7 +45,7 @@ def _parse_date(raw: str) -> str:
             return val.strftime("%Y-%m-%d")
 
     try:
-        from viko.client import client
+        from viko.core.client import client
         result = client.chat(
             f"Today is {today.strftime('%Y-%m-%d')}. "
             f"Convert this date expression to YYYY-MM-DD: '{raw}'. "
@@ -131,7 +131,7 @@ def _parse_flights_with_llm(
     destination: str,
     date:        str,
 ) -> list[dict]:
-    from viko.client import client
+    from viko.core.client import client
 
     prompt = (
         f"Extract flight options from {origin} to {destination} on {date} "

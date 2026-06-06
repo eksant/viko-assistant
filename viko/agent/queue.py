@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Any
 
-from viko.logger import get_logger
+from viko.core.logger import get_logger
 
 logger = get_logger("agent.queue")
 

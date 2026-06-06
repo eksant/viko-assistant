@@ -9,19 +9,19 @@ from google import genai
 from google.genai import types
 
 from viko.ui     import VikoUI
-from viko.memory import (
+from viko.core.memory import (
     update_memory,
     should_extract_memory, extract_memory, remember,
 )
-from viko.conversation import (
+from viko.core.conversation import (
     start_session as conv_start_session,
     end_session   as conv_end_session,
     save_message  as conv_save_message,
     get_recent_messages,
     summarize_session_async,
 )
-from viko.context_builder import build_system_context
-from viko.vector_store import index_message as vs_index_message
+from viko.core.context_builder import build_system_context
+from viko.core.vector_store import index_message as vs_index_message
 
 from viko.skills.file_processor    import file_processor
 from viko.skills.flight_finder     import flight_finder
@@ -64,7 +64,7 @@ CHUNK_SIZE          = 1024
 
 
 def _get_api_key() -> str:
-    from viko.config import get_gemini_key
+    from viko.core.config import get_gemini_key
     return get_gemini_key()
 
 

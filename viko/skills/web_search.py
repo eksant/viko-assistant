@@ -1,5 +1,5 @@
 def _get_api_key() -> str:
-    from viko.config import get_gemini_key
+    from viko.core.config import get_gemini_key
     return get_gemini_key()
 
 
@@ -101,7 +101,7 @@ def web_search(
 
     print(f"[WebSearch] 🔍 Query: {query!r}  Mode: {mode}")
     try:
-        from viko.client import client
+        from viko.core.client import client
         result = client.chat(
             query,
             system="You are a web search assistant. Answer factually and concisely."

@@ -3,7 +3,7 @@ import sys
 import threading
 from pathlib import Path
 
-from viko.logger import get_logger
+from viko.core.logger import get_logger
 
 logger = get_logger("self_engineer.engine")
 

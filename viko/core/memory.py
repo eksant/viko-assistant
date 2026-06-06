@@ -138,7 +138,7 @@ def update_memory(memory_update: dict) -> dict:
 
 def should_extract_memory(user_text: str, viko_text: str, api_key: str = "") -> bool:
     try:
-        from viko.client import client
+        from viko.core.client import client
 
         combined = f"User: {user_text[:300]}\nViko: {viko_text[:1000]}"
 
@@ -164,7 +164,7 @@ def should_extract_memory(user_text: str, viko_text: str, api_key: str = "") -> 
 
 def extract_memory(user_text: str, viko_text: str, api_key: str = "") -> dict:
     try:
-        from viko.client import client
+        from viko.core.client import client
 
         combined = f"User: {user_text[:600]}\nViko: {viko_text[:300]}"
 
@@ -299,7 +299,7 @@ def remember(key: str, value: str, category: str = "notes") -> str:
     update_memory({category: {key: {"value": value}}})
     try:
         import threading
-        from viko.vector_store import index_fact
+        from viko.core.vector_store import index_fact
         threading.Thread(
             target=index_fact,
             args=(f"{key}: {value}", category, key),
