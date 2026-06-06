@@ -1,14 +1,33 @@
+# Secrets & config
 .env
+config/api_keys.json
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
-memory/long_term.json
-config/api_keys.json
+*.egg-info/
+
+# Virtual environments
 venv/
 .venv/
-*.egg-info/
+
+# Build artifacts
 dist/
 build/
+
+# Memory & database (user data, not for repo)
+memory/*.db
+memory/*.sqlite3
+memory/long_term.json
+
+# Workspace files (user-generated content)
+workspace/**
+!workspace/**/.gitkeep
+
+# Logs
+*.log
+/tmp/viko*.log
 
 # SelfEngineer backups
 viko/self_engineer/backups/
