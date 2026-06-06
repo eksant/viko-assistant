@@ -120,7 +120,8 @@ class SetupOverlay(QWidget):
 class MainWindow(QMainWindow):
     _log_sig   = pyqtSignal(str)
     _state_sig = pyqtSignal(str)
-    _loc_sig   = pyqtSignal(float, float, str)   # lat, lon, label
+    _loc_sig     = pyqtSignal(float, float, str)   # lat, lon, label
+    _country_sig = pyqtSignal(object)              # list of polygon rings
 
     on_text_command = None   # set by VikoUI / viko.py
 
@@ -138,6 +139,7 @@ class MainWindow(QMainWindow):
         self._log_sig.connect(self._on_log)
         self._state_sig.connect(self._apply_state)
         self._loc_sig.connect(self._on_location)
+        self._country_sig.connect(self._on_country)
 
         self._build()
         self._setup_shortcuts()
@@ -365,27 +367,78 @@ class MainWindow(QMainWindow):
         if ms > 0:
             self._right_metrics.set_latency(ms)
 
+    # ISO alpha-2 → alpha-3 for world.geo.json filenames
+    _A2_TO_A3 = {
+        "ID": "IDN", "MY": "MYS", "SG": "SGP", "TH": "THA", "PH": "PHL",
+        "VN": "VNM", "MM": "MMR", "BN": "BRN", "KH": "KHM", "LA": "LAO",
+        "US": "USA", "CA": "CAN", "GB": "GBR", "AU": "AUS", "NZ": "NZL",
+        "JP": "JPN", "CN": "CHN", "KR": "KOR", "IN": "IND", "PK": "PAK",
+        "DE": "DEU", "FR": "FRA", "NL": "NLD", "IT": "ITA", "ES": "ESP",
+        "SA": "SAU", "AE": "ARE", "TR": "TUR", "EG": "EGY", "IR": "IRN",
+        "RU": "RUS", "BR": "BRA", "MX": "MEX", "ZA": "ZAF", "NG": "NGA",
+        "BD": "BGD", "LK": "LKA", "MV": "MDV", "NP": "NPL",
+    }
+
     def _fetch_location(self):
         try:
             import urllib.request, json as _json
             with urllib.request.urlopen("http://ip-api.com/json/", timeout=6) as r:
                 d = _json.loads(r.read())
-            lat   = float(d.get("lat", 3.14))
-            lon   = float(d.get("lon", 101.69))
-            city  = d.get("city", "")
-            country = d.get("countryCode", "")
-            # Format as degree-minute label
+            lat  = float(d.get("lat", 3.14))
+            lon  = float(d.get("lon", 101.69))
+            cc2  = d.get("countryCode", "")
             la_d, la_m = int(abs(lat)), int((abs(lat) % 1) * 60)
             lo_d, lo_m = int(abs(lon)), int((abs(lon) % 1) * 60)
             la_s = f"{la_d:02d}°{la_m:02d}′{'N' if lat >= 0 else 'S'}"
             lo_s = f"{lo_d:03d}°{lo_m:02d}′{'E' if lon >= 0 else 'W'}"
-            label = f"{la_s}  {lo_s}"
-            self._loc_sig.emit(lat, lon, label)
+            self._loc_sig.emit(lat, lon, f"{la_s}  {lo_s}")
+            # Fetch country polygon
+            if cc2:
+                polys = self._fetch_country_polys(cc2)
+                if polys:
+                    self._country_sig.emit(polys)
         except Exception:
-            pass   # keep default KL coordinates
+            pass
+
+    def _fetch_country_polys(self, cc2: str) -> list:
+        import urllib.request, json as _json
+        from pathlib import Path
+        cc3 = self._A2_TO_A3.get(cc2)
+        if not cc3:
+            return []
+        cache = Path.home() / ".viko" / "geo_cache" / f"{cc3}.json"
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            if cache.exists():
+                raw = cache.read_bytes()
+            else:
+                url = (f"https://raw.githubusercontent.com/johan/world.geo.json"
+                       f"/master/countries/{cc3}.geo.json")
+                req = urllib.request.Request(url, headers={"User-Agent": "VIKO/1.0"})
+                with urllib.request.urlopen(req, timeout=10) as r:
+                    raw = r.read()
+                cache.write_bytes(raw)
+            data = _json.loads(raw)
+        except Exception:
+            return []
+
+        polys = []
+        for feat in data.get("features", []):
+            geom  = feat.get("geometry", {})
+            gtype = geom.get("type", "")
+            coords = geom.get("coordinates", [])
+            if gtype == "Polygon":
+                polys.append([(c[0], c[1]) for c in coords[0]])
+            elif gtype == "MultiPolygon":
+                for part in coords:
+                    polys.append([(c[0], c[1]) for c in part[0]])
+        return polys
 
     def _on_location(self, lat: float, lon: float, label: str):
         self._left.set_location(lat, lon, label)
+
+    def _on_country(self, polys: list):
+        self._left.set_country_polys(polys)
 
 
 # ─── Public Facade (identical interface to old ui.py) ─────────────────────────

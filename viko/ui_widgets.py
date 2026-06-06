@@ -255,15 +255,21 @@ class SystemStatusCard(QWidget):
 class WorldMapWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._tick = 0
-        self._loc_lon   = 101.69
-        self._loc_lat   = 3.14
-        self._loc_label = "03°08′N  101°42′E"
+        self._tick          = 0
+        self._loc_lon       = 101.69
+        self._loc_lat       = 3.14
+        self._loc_label     = "03°08′N  101°42′E"
+        self._country_polys = []
         self.setFixedHeight(116)
         t = QTimer(self); t.timeout.connect(self._step); t.start(50)
 
     def set_location(self, lat: float, lon: float, label: str):
         self._loc_lat = lat; self._loc_lon = lon; self._loc_label = label
+        self.update()
+
+    def set_country_polys(self, polys: list):
+        """polys: list of rings, each ring = list of (lon, lat) tuples"""
+        self._country_polys = polys
         self.update()
 
     def _step(self): self._tick += 1; self.update()
@@ -294,7 +300,18 @@ class WorldMapWidget(QWidget):
                 if i == 0: path.moveTo(pt)
                 else:       path.lineTo(pt)
             path.closeSubpath()
-            p.setBrush(QBrush(pri(12))); p.setPen(QPen(pri(65), 0.7))
+            p.setBrush(QBrush(pri(12))); p.setPen(QPen(pri(50), 0.7))
+            p.drawPath(path)
+
+        # User's country — highlighted over continent layer
+        for ring in self._country_polys:
+            path = QPainterPath()
+            for i, (lon, lat) in enumerate(ring):
+                pt = proj(lon, lat)
+                if i == 0: path.moveTo(pt)
+                else:       path.lineTo(pt)
+            path.closeSubpath()
+            p.setBrush(QBrush(pri(55))); p.setPen(QPen(PRI, 0.9))
             p.drawPath(path)
 
         dot = proj(self._loc_lon, self._loc_lat)
@@ -732,6 +749,9 @@ class LeftPanel(QWidget):
 
     def set_location(self, lat: float, lon: float, label: str):
         self._map.set_location(lat, lon, label)
+
+    def set_country_polys(self, polys: list):
+        self._map.set_country_polys(polys)
 
 
 class RightMetricsPanel(QWidget):
