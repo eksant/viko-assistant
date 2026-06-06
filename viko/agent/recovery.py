@@ -4,6 +4,11 @@ import sys
 from pathlib import Path
 from enum import Enum
 
+from viko.logger import get_logger
+from viko.self_engineer.llm import generate_text
+
+logger = get_logger("agent.recovery")
+
 
 def get_base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -45,22 +50,14 @@ Return ONLY valid JSON:
 """
 
 
-def _get_api_key() -> str:
-    from viko.config import get_gemini_key
-    return get_gemini_key()
-
-
 def analyze_error(
     step: dict,
     error: str,
     attempt: int = 1,
     max_attempts: int = 2
 ) -> dict:
-    from google import genai
-    from google.genai import types
-
     if attempt >= max_attempts:
-        print(f"[ErrorHandler] Max attempts reached for step {step.get('step')} — forcing replan")
+        logger.warning("Max attempts reached for step %s — forcing replan", step.get("step"))
         return {
             "decision":       ErrorDecision.REPLAN,
             "reason":         f"Failed {attempt} times: {error[:100]}",
@@ -68,8 +65,6 @@ def analyze_error(
             "max_retries":    0,
             "user_message":   "Trying a different approach."
         }
-
-    client = genai.Client(api_key=_get_api_key())
 
     prompt = f"""Failed step:
 Tool: {step.get('tool')}
@@ -83,15 +78,10 @@ Error:
 Attempt number: {attempt}"""
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=prompt,
-            config=types.GenerateContentConfig(system_instruction=ERROR_ANALYST_PROMPT),
-        )
-        text     = response.text.strip()
-        text     = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
-
+        text   = generate_text(prompt, system=ERROR_ANALYST_PROMPT)
+        text   = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
         result = json.loads(text)
+
         decision_str = result.get("decision", "replan").lower()
         decision_map = {
             "retry":  ErrorDecision.RETRY,
@@ -105,11 +95,11 @@ Attempt number: {attempt}"""
             result["decision"]     = ErrorDecision.REPLAN
             result["user_message"] = "This step is critical — finding alternative approach."
 
-        print(f"[ErrorHandler] Decision: {result['decision'].value} — {result.get('reason', '')}")
+        logger.info("Error decision: %s — %s", result["decision"].value, result.get("reason", ""))
         return result
 
     except Exception as e:
-        print(f"[ErrorHandler] Analysis failed: {e} — defaulting to replan")
+        logger.error("Error analysis failed: %s — defaulting to replan", e)
         return {
             "decision":       ErrorDecision.REPLAN,
             "reason":         str(e),
@@ -120,10 +110,6 @@ Attempt number: {attempt}"""
 
 
 def generate_fix(step: dict, error: str, fix_suggestion: str) -> dict:
-    from google import genai
-
-    client = genai.Client(api_key=_get_api_key())
-
     prompt = f"""A task step failed. Generate a replacement step.
 
 Original step:
@@ -138,8 +124,7 @@ Write a Python script that accomplishes the same goal differently.
 Return ONLY the Python code, no explanation."""
 
     try:
-        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-        code = response.text.strip()
+        code = generate_text(prompt).strip()
         code = re.sub(r"```(?:python)?", "", code).strip().rstrip("`").strip()
 
         return {
@@ -157,7 +142,7 @@ Return ONLY the Python code, no explanation."""
         }
 
     except Exception as e:
-        print(f"[ErrorHandler] Fix generation failed: {e}")
+        logger.error("Fix generation failed: %s", e)
         return {
             "step":        step.get("step"),
             "tool":        "generated_code",

@@ -1,14 +1,10 @@
 import json
 import re
-import sys
-from pathlib import Path
 
+from viko.logger import get_logger
+from viko.self_engineer.llm import generate_text
 
-def get_base_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
-    return Path(__file__).resolve().parent.parent
-
+logger = get_logger("agent.planner")
 
 PLANNER_PROMPT = """You are the planning module of Viko, a personal AI assistant.
 Your job: break any user goal into a sequence of steps using ONLY the tools listed below.
@@ -152,30 +148,14 @@ OUTPUT — return ONLY valid JSON, no markdown, no explanation, no code blocks:
 """
 
 
-def _get_api_key() -> str:
-    from viko.config import get_gemini_key
-    return get_gemini_key()
-
-
 def create_plan(goal: str, context: str = "") -> dict:
-    from google import genai
-    from google.genai import types
-
-    client = genai.Client(api_key=_get_api_key())
-
     user_input = f"Goal: {goal}"
     if context:
         user_input += f"\n\nContext: {context}"
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=user_input,
-            config=types.GenerateContentConfig(system_instruction=PLANNER_PROMPT),
-        )
-        text     = response.text.strip()
-        text     = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
-
+        text = generate_text(user_input, system=PLANNER_PROMPT)
+        text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
         plan = json.loads(text)
 
         if "steps" not in plan or not isinstance(plan["steps"], list):
@@ -187,22 +167,22 @@ def create_plan(goal: str, context: str = "") -> dict:
                 step["tool"] = "web_search"
                 step["parameters"] = {"query": desc[:200]}
 
-        print(f"[Planner] Plan: {len(plan['steps'])} steps")
+        logger.info("Plan created: %d steps for goal: %s", len(plan["steps"]), goal[:60])
         for s in plan["steps"]:
-            print(f"  Step {s['step']}: [{s['tool']}] {s['description']}")
+            logger.debug("  Step %s: [%s] %s", s["step"], s["tool"], s["description"])
 
         return plan
 
     except json.JSONDecodeError as e:
-        print(f"[Planner] JSON parse failed: {e}")
+        logger.error("Plan JSON parse failed: %s", e)
         return _fallback_plan(goal)
     except Exception as e:
-        print(f"[Planner] Planning failed: {e}")
+        logger.error("Planning failed: %s", e)
         return _fallback_plan(goal)
 
 
 def _fallback_plan(goal: str) -> dict:
-    print("[Planner] Fallback plan")
+    logger.warning("Using fallback plan for: %s", goal[:60])
     return {
         "goal": goal,
         "steps": [
@@ -218,11 +198,6 @@ def _fallback_plan(goal: str) -> dict:
 
 
 def replan(goal: str, completed_steps: list, failed_step: dict, error: str) -> dict:
-    from google import genai
-    from google.genai import types
-
-    client = genai.Client(api_key=_get_api_key())
-
     completed_summary = "\n".join(
         f"  - Step {s['step']} ({s['tool']}): DONE" for s in completed_steps
     )
@@ -238,22 +213,17 @@ Error: {error}
 Create a REVISED plan for the remaining work only. Do not repeat completed steps."""
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(system_instruction=PLANNER_PROMPT),
-        )
-        text     = response.text.strip()
-        text     = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
-        plan     = json.loads(text)
+        text = generate_text(prompt, system=PLANNER_PROMPT)
+        text = re.sub(r"```(?:json)?", "", text).strip().rstrip("`").strip()
+        plan = json.loads(text)
 
         for step in plan.get("steps", []):
             if step.get("tool") == "generated_code":
                 step["tool"] = "web_search"
                 step["parameters"] = {"query": step.get("description", goal)[:200]}
 
-        print(f"[Planner] Revised plan: {len(plan['steps'])} steps")
+        logger.info("Revised plan: %d steps", len(plan["steps"]))
         return plan
     except Exception as e:
-        print(f"[Planner] Replan failed: {e}")
+        logger.error("Replan failed: %s", e)
         return _fallback_plan(goal)

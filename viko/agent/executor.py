@@ -8,8 +8,11 @@ import os
 from pathlib import Path
 from typing import Callable
 
+from viko.logger import get_logger
 from viko.agent.planner  import create_plan, replan
 from viko.agent.recovery import analyze_error, generate_fix, ErrorDecision
+
+logger = get_logger("agent.executor")
 
 
 def get_base_dir() -> Path:
@@ -18,13 +21,8 @@ def get_base_dir() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def _get_api_key() -> str:
-    from viko.config import get_gemini_key
-    return get_gemini_key()
-
-
 def _run_generated_code(description: str, speak: Callable | None = None) -> str:
-    from google import genai
+    from viko.self_engineer.llm import generate_text
 
     if speak:
         speak("Writing custom code for this task.")
@@ -43,9 +41,6 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
         except Exception:
             pass
 
-    from google.genai import types
-
-    client = genai.Client(api_key=_get_api_key())
     sys_instr = (
         "You are an expert Python developer. "
         "Write clean, complete, working Python code. "
@@ -60,12 +55,10 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
     )
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=f"Write Python code to accomplish this task:\n\n{description}",
-            config=types.GenerateContentConfig(system_instruction=sys_instr),
+        code = generate_text(
+            f"Write Python code to accomplish this task:\n\n{description}",
+            system=sys_instr,
         )
-        code = response.text.strip()
         code = re.sub(r"```(?:python)?", "", code).strip().rstrip("`").strip()
 
         with tempfile.NamedTemporaryFile(
@@ -74,7 +67,7 @@ def _run_generated_code(description: str, speak: Callable | None = None) -> str:
             f.write(code)
             tmp_path = f.name
 
-        print(f"[Executor] Running generated code: {tmp_path}")
+        logger.info("Running generated code: %s", tmp_path)
 
         result = subprocess.run(
             [sys.executable, tmp_path],
@@ -120,27 +113,22 @@ def _inject_context(params: dict, tool: str, step_results: dict, goal: str = "")
                 if v and len(v) > 100 and v not in ("Done.", "Completed.")
             ]
             if all_results:
-                combined = "\n\n---\n\n".join(all_results)
+                combined   = "\n\n---\n\n".join(all_results)
                 translated = _translate_to_goal_language(combined, goal)
                 params["content"] = translated
-                print(f"[Executor] Injected + translated content")
+                logger.debug("Injected + translated content into file_controller step")
 
     return params
 
 
 def _detect_language(text: str) -> str:
-    from google import genai
-    client = genai.Client(api_key=_get_api_key())
+    from viko.self_engineer.llm import generate_text
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=(
-                f"What language is this text written in? "
-                f"Reply with ONLY the language name in English (e.g. Turkish, English, French).\n\n"
-                f"Text: {text[:200]}"
-            ),
-        )
-        return response.text.strip()
+        return generate_text(
+            f"What language is this text written in? "
+            f"Reply with ONLY the language name in English (e.g. Turkish, English, French).\n\n"
+            f"Text: {text[:200]}"
+        ).strip()
     except Exception:
         return "English"
 
@@ -149,11 +137,10 @@ def _translate_to_goal_language(content: str, goal: str) -> str:
     if not goal:
         return content
     try:
-        from google import genai
-        client = genai.Client(api_key=_get_api_key())
+        from viko.self_engineer.llm import generate_text
 
         target_lang = _detect_language(goal)
-        print(f"[Executor] Translating to: {target_lang}")
+        logger.debug("Translating content to: %s", target_lang)
 
         prompt = (
             f"You are a professional translator. "
@@ -165,12 +152,11 @@ def _translate_to_goal_language(content: str, goal: str) -> str:
             f"- Output ONLY the translated text, nothing else\n\n"
             f"Text to translate:\n{content[:4000]}"
         )
-        response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-        translated = response.text.strip()
-        print(f"[Executor] Translation done ({target_lang})")
+        translated = generate_text(prompt).strip()
+        logger.debug("Translation done (%s)", target_lang)
         return translated
     except Exception as e:
-        print(f"[Executor] Translation failed: {e}")
+        logger.warning("Translation failed: %s", e)
         return content
 
 
@@ -248,7 +234,7 @@ def _call_tool(tool: str, parameters: dict, speak: Callable | None) -> str:
         return _run_generated_code(description, speak=speak)
 
     else:
-        print(f"[Executor] Unknown tool '{tool}' — falling back to generated_code")
+        logger.warning("Unknown tool '%s' — falling back to generated_code", tool)
         return _run_generated_code(f"Accomplish this task: {parameters}", speak=speak)
 
 
@@ -262,7 +248,7 @@ class AgentExecutor:
         speak:       Callable | None        = None,
         cancel_flag: threading.Event | None = None,
     ) -> str:
-        print(f"\n[Executor] Goal: {goal}")
+        logger.info("Goal: %s", goal)
 
         replan_attempts = 0
         completed_steps = []
@@ -293,7 +279,7 @@ class AgentExecutor:
 
                 params = _inject_context(params, tool, step_results, goal=goal)
 
-                print(f"\n[Executor] Step {step_num}: [{tool}] {desc}")
+                logger.info("Step %s: [%s] %s", step_num, tool, desc)
 
                 attempt = 1
                 step_ok = False
@@ -305,13 +291,13 @@ class AgentExecutor:
                         result = _call_tool(tool, params, speak)
                         step_results[step_num] = result
                         completed_steps.append(step)
-                        print(f"[Executor] Step {step_num} done: {str(result)[:100]}")
+                        logger.info("Step %s done: %s", step_num, str(result)[:100])
                         step_ok = True
                         break
 
                     except Exception as e:
                         error_msg = str(e)
-                        print(f"[Executor] Step {step_num} attempt {attempt} failed: {error_msg}")
+                        logger.warning("Step %s attempt %d failed: %s", step_num, attempt, error_msg)
 
                         recovery = analyze_error(step, error_msg, attempt=attempt)
                         decision = recovery["decision"]
@@ -326,7 +312,7 @@ class AgentExecutor:
                             continue
 
                         elif decision == ErrorDecision.SKIP:
-                            print(f"[Executor] Skipping step {step_num}")
+                            logger.info("Skipping step %s", step_num)
                             completed_steps.append(step)
                             step_ok = True
                             break
@@ -352,7 +338,7 @@ class AgentExecutor:
                                     step_ok = True
                                     break
                                 except Exception as fix_err:
-                                    print(f"[Executor] Fix failed: {fix_err}")
+                                    logger.warning("Fix attempt failed: %s", fix_err)
 
                             failed_step  = step
                             failed_error = error_msg
@@ -381,21 +367,21 @@ class AgentExecutor:
             plan = replan(goal, completed_steps, failed_step, failed_error)
 
     def _summarize(self, goal: str, completed_steps: list, speak: Callable | None) -> str:
-        fallback = f"All done. Completed {len(completed_steps)} steps for: {goal[:60]}."
+        from viko.self_engineer.llm import generate_text
+
+        fallback  = f"All done. Completed {len(completed_steps)} steps for: {goal[:60]}."
+        steps_str = "\n".join(f"- {s.get('description', '')}" for s in completed_steps)
+        prompt    = (
+            f'User goal: "{goal}"\n'
+            f"Completed steps:\n{steps_str}\n\n"
+            "Write a single natural sentence summarizing what was accomplished. "
+            "Be direct and positive."
+        )
         try:
-            from google import genai
-            client    = genai.Client(api_key=_get_api_key())
-            steps_str = "\n".join(f"- {s.get('description', '')}" for s in completed_steps)
-            prompt    = (
-                f'User goal: "{goal}"\n'
-                f"Completed steps:\n{steps_str}\n\n"
-                "Write a single natural sentence summarizing what was accomplished. "
-                "Be direct and positive."
-            )
-            response = client.models.generate_content(model="gemini-2.5-flash-lite", contents=prompt)
-            summary  = response.text.strip()
+            summary = generate_text(prompt).strip()
             if speak: speak(summary)
             return summary
-        except Exception:
+        except Exception as e:
+            logger.warning("Summarize failed: %s", e)
             if speak: speak(fallback)
             return fallback
