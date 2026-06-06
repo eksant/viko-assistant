@@ -104,30 +104,30 @@ def _hdr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
     x2    = px + pw - slant - 10
     cx    = W // 2
 
-    p.setFont(F(8, True)); p.setPen(pri(100))
+    p.setFont(F(10, True)); p.setPen(pri(100))
     p.drawText(x1, H // 2 - 1, "B.1.0.0")
-    p.setFont(F(7)); p.setPen(pri(55))
+    p.setFont(F(9)); p.setPen(pri(55))
     p.drawText(x1, H // 2 + 15, "VIKO ASSISTANT")
 
-    p.setFont(F(18, True)); p.setPen(PRI)
+    p.setFont(F(20, True)); p.setPen(PRI)
     fm = QFontMetrics(p.font())
     titl = "VIKO"
-    p.drawText(cx - fm.horizontalAdvance(titl) // 2, H // 2 + 7, titl)
+    p.drawText(cx - fm.horizontalAdvance(titl) // 2, H // 2 + 8, titl)
 
-    p.setFont(F(8)); p.setPen(pri(70))
+    p.setFont(F(9)); p.setPen(pri(70))
     sub = "JUST A RATHER VERY INTELLIGENT SYSTEM"
     fm2 = QFontMetrics(p.font())
-    p.drawText(cx - fm2.horizontalAdvance(sub) // 2, H // 2 + 21, sub)
+    p.drawText(cx - fm2.horizontalAdvance(sub) // 2, H // 2 + 23, sub)
 
-    p.setFont(F(12, True)); p.setPen(AMB)
+    p.setFont(F(14, True)); p.setPen(AMB)
     clk = time.strftime("%H:%M:%S")
     fm3 = QFontMetrics(p.font())
     p.drawText(x2 - fm3.horizontalAdvance(clk), H // 2 + 7, clk)
 
-    p.setFont(F(7)); p.setPen(DIM)
+    p.setFont(F(9)); p.setPen(DIM)
     dat = time.strftime("%a  %d %b %Y")
     fm4 = QFontMetrics(p.font())
-    p.drawText(x2 - fm4.horizontalAdvance(dat), H // 2 + 21, dat)
+    p.drawText(x2 - fm4.horizontalAdvance(dat), H // 2 + 23, dat)
 
 
 def _ftr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
@@ -139,24 +139,24 @@ def _ftr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
     cx    = W // 2
     cy    = H // 2 + 6
 
-    p.setFont(F(7)); p.setPen(pri(100))
+    p.setFont(F(9)); p.setPen(pri(100))
     p.drawText(x1, cy - 3, "[F4] Mute  ·  [F11] Fullscreen")
 
     ma = int(150 + 105 * abs(math.sin(tick * 0.14)))
     p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(suc(ma)))
-    p.drawEllipse(QPointF(x1 + 2, cy + 11), 3.5, 3.5)
-    p.setFont(F(7)); p.setPen(suc(160))
-    p.drawText(x1 + 10, cy + 16, "MIC ACTIVE")
+    p.drawEllipse(QPointF(x1 + 2, cy + 12), 4, 4)
+    p.setFont(F(9)); p.setPen(suc(160))
+    p.drawText(x1 + 12, cy + 17, "MIC ACTIVE")
 
-    p.setFont(F(8, True)); p.setPen(pri(90))
+    p.setFont(F(10, True)); p.setPen(pri(90))
     brand = "VIKO  ·  B.1.0.0  ·  CLASSIFIED"
     fm = QFontMetrics(p.font())
-    p.drawText(cx - fm.horizontalAdvance(brand) // 2, cy + 7, brand)
+    p.drawText(cx - fm.horizontalAdvance(brand) // 2, cy + 8, brand)
 
-    p.setFont(F(7)); p.setPen(pri(65))
+    p.setFont(F(9)); p.setPen(pri(65))
     copy = "© VIKO INDUSTRIES"
     fm2 = QFontMetrics(p.font())
-    p.drawText(x2 - fm2.horizontalAdvance(copy), cy + 7, copy)
+    p.drawText(x2 - fm2.horizontalAdvance(copy), cy + 8, copy)
 
 
 class MetricCard(QWidget):
@@ -190,11 +190,11 @@ class MetricCard(QWidget):
         p.setPen(QPen(QBrush(cg), 2.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         p.drawArc(rect, int(210 * 16), int(-240 * val * 16))
 
-        p.setFont(F(9, True)); p.setPen(self._col)
+        p.setFont(F(11, True)); p.setPen(self._col)
         fm = QFontMetrics(p.font())
         p.drawText(acx - fm.horizontalAdvance(text) // 2, acy + 5, text)
 
-        p.setFont(F(7)); p.setPen(DIM)
+        p.setFont(F(9)); p.setPen(DIM)
         p.drawText(acx + r + 10, acy - 10, self._label)
 
         bx = acx + r + 10; by = acy + 4; bw = W - bx - 10; bh = 4
@@ -228,27 +228,27 @@ class SystemStatusCard(QWidget):
         p.setBrush(QBrush(_c(8, 19, 34, 215)))
         p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
 
-        p.setFont(F(7)); p.setPen(DIM)
-        p.drawText(10, 16, "SYSTEM STATUS")
+        p.setFont(F(9)); p.setPen(DIM)
+        p.drawText(10, 17, "SYSTEM STATUS")
 
         col_fn = suc if self._online else (lambda a=255: _c(255, 68, 68, a))
         lbl_txt = "ONLINE" if self._online else "OFFLINE"
 
         da = int(210 + 45 * math.sin(self._tick * 0.10))
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(col_fn(da)))
-        p.drawEllipse(QRectF(10, 23, 10, 10))
-        pr_r = 7 + 3 * math.sin(self._tick * 0.10)
+        p.drawEllipse(QRectF(10, 24, 11, 11))
+        pr_r = 8 + 3 * math.sin(self._tick * 0.10)
         pa   = int(80 + 60 * abs(math.sin(self._tick * 0.10)))
         p.setPen(QPen(col_fn(pa), 0.8)); p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawEllipse(QPointF(15, 28), pr_r, pr_r)
+        p.drawEllipse(QPointF(15.5, 29.5), pr_r, pr_r)
 
-        p.setFont(F(11, True)); p.setPen(col_fn())
-        p.drawText(27, 35, lbl_txt)
+        p.setFont(F(13, True)); p.setPen(col_fn())
+        p.drawText(28, 37, lbl_txt)
 
-        p.setFont(F(7)); p.setPen(pri(110))
-        p.drawText(10, H - 8, "B.1.0.0")
-        p.setFont(F(7)); p.setPen(pri(65))
-        p.drawText(W // 2, H - 8, "GEMINI API")
+        p.setFont(F(9)); p.setPen(pri(110))
+        p.drawText(10, H - 7, "B.1.0.0")
+        p.setFont(F(9)); p.setPen(pri(65))
+        p.drawText(W // 2, H - 7, "GEMINI API")
         p.end()
 
 
@@ -298,10 +298,10 @@ class WorldMapWidget(QWidget):
         p.setPen(QPen(amb(pa // 2), 0.9)); p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawEllipse(kl, pr_r, pr_r)
 
-        p.setFont(F(7)); p.setPen(DIM)
-        p.drawText(0, 11, "LOCATION  TRACKING")
-        p.setFont(F(7)); p.setPen(amb(175))
-        p.drawText(0, H, "03°08′N  101°42′E")
+        p.setFont(F(9)); p.setPen(DIM)
+        p.drawText(0, 12, "LOCATION  TRACKING")
+        p.setFont(F(9)); p.setPen(amb(175))
+        p.drawText(0, H - 1, "03°08′N  101°42′E")
         p.end()
 
 
@@ -324,27 +324,27 @@ class CommsCard(QWidget):
         p.setPen(QPen(pri(28), 1)); p.setBrush(QBrush(_c(8, 19, 34, 215)))
         p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
 
-        p.setFont(F(7)); p.setPen(DIM)
-        p.drawText(10, 16, "COMMS  ·  GEMINI API")
+        p.setFont(F(9)); p.setPen(DIM)
+        p.drawText(10, 17, "COMMS  ·  GEMINI API")
 
         da = int(210 + 45 * math.sin(self._tick * 0.10))
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(suc(da)))
-        p.drawEllipse(QRectF(10, 24, 8, 8))
-        p.setFont(F(11, True)); p.setPen(SUC)
-        p.drawText(24, 35, "ONLINE")
+        p.drawEllipse(QRectF(10, 25, 9, 9))
+        p.setFont(F(13, True)); p.setPen(SUC)
+        p.drawText(25, 37, "ONLINE")
 
         lat = min(1.0, self._latency_ms / 1000)
-        p.setFont(F(7)); p.setPen(DIM)
-        p.drawText(10, 54, "LATENCY")
-        bx, by, bw, bh = 58, 46, W - 68, 5
+        p.setFont(F(9)); p.setPen(DIM)
+        p.drawText(10, 57, "LATENCY")
+        bx, by, bw, bh = 62, 49, W - 72, 5
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(pri(20)))
         p.drawRoundedRect(QRectF(bx, by, bw, bh), 2, 2)
         lg = QLinearGradient(bx, 0, bx + bw, 0)
         lg.setColorAt(0, suc(175)); lg.setColorAt(1, pri(115))
         p.setBrush(QBrush(lg))
         p.drawRoundedRect(QRectF(bx, by, bw * lat, bh), 2, 2)
-        p.setFont(F(7)); p.setPen(suc(175))
-        p.drawText(int(bx + bw * lat) + 4, 54, f"{self._latency_ms}ms")
+        p.setFont(F(9)); p.setPen(suc(175))
+        p.drawText(int(bx + bw * lat) + 4, 57, f"{self._latency_ms}ms")
         p.end()
 
 
@@ -372,13 +372,13 @@ class SessionCard(QWidget):
         e = int(time.time() - self._t0)
         ts = f"{e // 3600:02d}:{(e % 3600) // 60:02d}:{e % 60:02d}"
 
-        p.setFont(F(7)); p.setPen(DIM)
-        p.drawText(10, 16, "SESSION INTEL")
-        p.setFont(F(12, True)); p.setPen(AMB)
-        p.drawText(10, 38, ts)
-        p.setFont(F(7)); p.setPen(pri(135))
-        p.drawText(10, 53, "UPTIME")
-        p.drawText(W // 2, 53, f"OPS: {self._ops}")
+        p.setFont(F(9)); p.setPen(DIM)
+        p.drawText(10, 17, "SESSION INTEL")
+        p.setFont(F(14, True)); p.setPen(AMB)
+        p.drawText(10, 39, ts)
+        p.setFont(F(9)); p.setPen(pri(135))
+        p.drawText(10, 54, "UPTIME")
+        p.drawText(W // 2, 54, f"OPS: {self._ops}")
         p.end()
 
 
@@ -451,6 +451,7 @@ class HudCanvas(QWidget):
         W, H = self.width(), self.height()
         cx = W // 2 + (RIGHT_W - LEFT_W) // 2
         cy = H // 2
+        s  = min(W, H) / 620.0   # scale relative to reference canvas
 
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(BG))
         p.drawRect(0, 0, W, H)
@@ -468,6 +469,7 @@ class HudCanvas(QWidget):
             ( 64, 16,  6, 2.2, 68, True ),
         ]
         for i, (r, nseg, gap, lw, base_a, prom) in enumerate(rings):
+            r = int(r * s)
             rot = self._rot[i]; seg_deg = 360 / nseg; arc_deg = seg_deg - gap
             ab = int(self._audio * 38) if prom else 0
             a  = min(255, base_a + ab)
@@ -484,56 +486,58 @@ class HudCanvas(QWidget):
         for pr in self._pulses:
             a = max(0, int(200 * (1.0 - pr / lim)))
             p.setPen(QPen(pri(a), 1.2)); p.setBrush(Qt.BrushStyle.NoBrush)
-            p.drawEllipse(QPointF(cx, cy), pr, pr)
+            p.drawEllipse(QPointF(cx, cy), pr * s, pr * s)
 
-        t_r_out = 174.0; t_r_in = t_r_out - 7; t_r_lng = t_r_out - 13
+        t_r_out = 174.0 * s; t_r_in = t_r_out - 7 * s; t_r_lng = t_r_out - 13 * s
         p.setPen(QPen(pri(90), 1))
         for deg in range(0, 360, 6):
             rad = math.radians(deg); cos_r, sin_r = math.cos(rad), math.sin(rad)
             inn = t_r_lng if deg % 30 == 0 else t_r_in
             p.drawLine(QPointF(cx + t_r_out * cos_r, cy - t_r_out * sin_r),
                        QPointF(cx + inn * cos_r, cy - inn * sin_r))
-        m_r_out = 102.0; p.setPen(QPen(pri(70), 1))
+        m_r_out = 102.0 * s; p.setPen(QPen(pri(70), 1))
         for deg in range(0, 360, 15):
             rad = math.radians(deg); cos_r, sin_r = math.cos(rad), math.sin(rad)
-            inn = m_r_out - 10 if deg % 45 == 0 else m_r_out - 5
+            inn = m_r_out - 10 * s if deg % 45 == 0 else m_r_out - 5 * s
             p.drawLine(QPointF(cx + m_r_out * cos_r, cy - m_r_out * sin_r),
                        QPointF(cx + inn * cos_r, cy - inn * sin_r))
 
         scanners = [(174,0,38,2.2,pri),(174,1,22,1.5,pri),(136,2,52,1.8,amb),(154,3,28,1.2,pri)]
         sa = int(160 + 60 * self._audio)
         for r, si, arc_len, lw, col_fn in scanners:
+            r = int(r * s)
             rect = QRectF(cx - r, cy - r, r * 2, r * 2)
             p.setPen(QPen(col_fn(sa // 5), lw * 4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
             p.drawArc(rect, int(self._scan[si] * 16), int(arc_len * 16))
             p.setPen(QPen(col_fn(sa), lw, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
             p.drawArc(rect, int(self._scan[si] * 16), int(arc_len * 16))
 
+        card_r = 100 * s
         for angle, lbl in [(90,"N"),(0,"E"),(270,"S"),(180,"W")]:
             a_rad = math.radians(angle)
-            mx2 = cx + int(100 * math.cos(a_rad)); my2 = cy - int(100 * math.sin(a_rad))
+            mx2 = cx + int(card_r * math.cos(a_rad)); my2 = cy - int(card_r * math.sin(a_rad))
             p.setPen(QPen(pri(115), 1)); p.setBrush(QBrush(pri(28)))
-            p.drawEllipse(QPointF(mx2, my2), 5.5, 5.5)
-            p.setFont(F(7, True)); p.setPen(pri(185))
+            p.drawEllipse(QPointF(mx2, my2), 5.5 * s, 5.5 * s)
+            p.setFont(F(9, True)); p.setPen(pri(185))
             p.drawText(mx2 - 3, my2 + 4, lbl)
 
-        orb_r = 38 + self._audio * 10
+        orb_r = (38 + self._audio * 10) * s
         rg2 = QRadialGradient(QPointF(cx, cy), orb_r)
         rg2.setColorAt(0.00, pri(210)); rg2.setColorAt(0.35, pri(70))
         rg2.setColorAt(0.75, pri(14)); rg2.setColorAt(1.00, pri(0))
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(rg2))
         p.drawEllipse(QPointF(cx, cy), orb_r, orb_r)
         p.setPen(QPen(pri(155), 1.5)); p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawEllipse(QPointF(cx, cy), 19, 19)
+        p.drawEllipse(QPointF(cx, cy), 19 * s, 19 * s)
         for i in range(4):
-            wr = 21 + i * 9 + self._audio * 15; wa = max(0, int(125 - i * 28))
+            wr = (21 + i * 9 + self._audio * 15) * s; wa = max(0, int(125 - i * 28))
             p.setPen(QPen(pri(wa), 1)); p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawEllipse(QPointF(cx, cy), wr, wr)
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(PRI))
-        p.drawEllipse(QPointF(cx, cy), 3, 3)
+        p.drawEllipse(QPointF(cx, cy), max(2.0, 3 * s), max(2.0, 3 * s))
 
-        N = len(self._wave); bw = 7; max_h = 44
-        wx0 = cx - N * bw // 2; wy = H - 18
+        N = len(self._wave); bw = max(5, int(9 * s)); max_h = int(55 * s)
+        wx0 = cx - N * bw // 2; wy = H - 24
         for i, h_frac in enumerate(self._wave):
             hgt = max(2, int(h_frac * max_h))
             if self.state == "speaking":    col = PRI if h_frac > 0.55 else pri(110)
@@ -550,16 +554,16 @@ class HudCanvas(QWidget):
         if self._muted: dot_col = _c(255, 68, 68); lbl_text = "MUTED"
 
         sym = "●" if self._blink else "○"
-        ind_y = wy - max_h - 16
-        p.setFont(F(10, True)); p.setPen(dot_col)
+        ind_y = wy - max_h - 20
+        p.setFont(F(12, True)); p.setPen(dot_col)
         lbl_full = f"{sym}  {lbl_text}"
         fm = QFontMetrics(p.font())
         p.drawText(cx - fm.horizontalAdvance(lbl_full) // 2, ind_y, lbl_full)
 
-        p.setFont(F(7)); p.setPen(pri(75))
+        p.setFont(F(9)); p.setPen(pri(75))
         top_lbl = "SYSTEM TRACKING"
         fm2 = QFontMetrics(p.font())
-        p.drawText(cx - fm2.horizontalAdvance(top_lbl) // 2, cy - 185, top_lbl)
+        p.drawText(cx - fm2.horizontalAdvance(top_lbl) // 2, cy - int(185 * s), top_lbl)
         p.end()
 
 
@@ -579,7 +583,7 @@ class LogWidget(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setReadOnly(True)
-        self.setFont(F(11))
+        self.setFont(F(12))
         self.setStyleSheet("""
             QTextEdit {
                 background: rgba(8,19,34,215);
@@ -671,14 +675,14 @@ class FileDropCard(QWidget):
         p.setPen(QPen(pri(alpha), 1, Qt.PenStyle.DashLine))
         p.setBrush(QBrush(_c(0, 212, 255, 8 if not self._hover else 18)))
         p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
-        p.setFont(F(8)); p.setPen(pri(alpha + 40))
+        p.setFont(F(10)); p.setPen(pri(alpha + 40))
         lbl = "⬡  DROP FILE HERE"
         fm  = QFontMetrics(p.font())
         p.drawText((W - fm.horizontalAdvance(lbl)) // 2, H // 2 + 3, lbl)
-        p.setFont(F(7)); p.setPen(DIM)
+        p.setFont(F(9)); p.setPen(DIM)
         sub = "or click to browse"
         fm2 = QFontMetrics(p.font())
-        p.drawText((W - fm2.horizontalAdvance(sub)) // 2, H // 2 + 18, sub)
+        p.drawText((W - fm2.horizontalAdvance(sub)) // 2, H // 2 + 20, sub)
         p.end()
 
     def mousePressEvent(self, _):
@@ -750,7 +754,7 @@ class ActivityPanel(QWidget):
         lay.setSpacing(8)
 
         lbl_log = QLabel("◈  ACTIVITY LOG")
-        lbl_log.setFont(F(9, True))
+        lbl_log.setFont(F(11, True))
         lbl_log.setStyleSheet(f"color: {PRI.name()};")
         lay.addWidget(lbl_log)
 
@@ -758,7 +762,7 @@ class ActivityPanel(QWidget):
         lay.addWidget(self._log, 1)
 
         lbl_file = QLabel("⬡  FILE UPLOAD")
-        lbl_file.setFont(F(9, True))
+        lbl_file.setFont(F(11, True))
         lbl_file.setStyleSheet(f"color: {AMB.name()};")
         lay.addWidget(lbl_file)
 
@@ -766,7 +770,7 @@ class ActivityPanel(QWidget):
         lay.addWidget(self._drop)
 
         lbl_chat = QLabel("◎  COMMAND INPUT")
-        lbl_chat.setFont(F(9, True))
+        lbl_chat.setFont(F(11, True))
         lbl_chat.setStyleSheet(f"color: {PRI.name()};")
         lay.addWidget(lbl_chat)
 
@@ -774,7 +778,7 @@ class ActivityPanel(QWidget):
         ilay.setContentsMargins(0, 0, 0, 0); ilay.setSpacing(6)
         self._input = QLineEdit()
         self._input.setPlaceholderText("Type a command...")
-        self._input.setFont(F(9))
+        self._input.setFont(F(11))
         self._input.setStyleSheet("""
             QLineEdit {
                 background: rgba(8,19,34,215); color: rgba(200,232,248,200);
@@ -783,7 +787,7 @@ class ActivityPanel(QWidget):
             QLineEdit:focus { border-color: rgba(0,212,255,140); }
         """)
         ilay.addWidget(self._input, 1)
-        btn = QPushButton("▶"); btn.setFixedSize(32, 32); btn.setFont(F(8, True))
+        btn = QPushButton("▶"); btn.setFixedSize(34, 34); btn.setFont(F(10, True))
         btn.setStyleSheet(f"""
             QPushButton {{ background: rgba(0,212,255,25); color: {PRI.name()};
                 border: 1px solid rgba(0,212,255,80); border-radius: 6px; }}
