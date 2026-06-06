@@ -1158,6 +1158,22 @@ class VikoLive:
                     self.ui.set_state("LISTENING")
                     self.ui.write_log("SYS: Viko online.")
 
+                    # Announce self-update restart if flag was set by restarter.py
+                    try:
+                        from viko.self_engineer.restarter import check_and_clear_flag
+                        _restart_msg = check_and_clear_flag()
+                        if _restart_msg:
+                            self.ui.write_log("SYS: Restarted after self-update.")
+                            async def _announce_restart(msg=_restart_msg):
+                                await asyncio.sleep(2.0)
+                                await session.send_client_content(
+                                    turns={"parts": [{"text": msg}]},
+                                    turn_complete=True
+                                )
+                            tg.create_task(_announce_restart())
+                    except Exception as _re:
+                        print(f"[SelfEngineer] Restart check failed: {_re}")
+
                     tg.create_task(self._send_realtime())
                     tg.create_task(self._listen_audio())
                     tg.create_task(self._receive_audio())
