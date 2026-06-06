@@ -561,3 +561,237 @@ class HudCanvas(QWidget):
         fm2 = QFontMetrics(p.font())
         p.drawText(cx - fm2.horizontalAdvance(top_lbl) // 2, cy - 185, top_lbl)
         p.end()
+
+
+class LogWidget(QTextEdit):
+    """Activity log with typewriter effect. Thread-safe via signal."""
+    _sig = pyqtSignal(str)
+
+    # Tag colour map (matches ui_backup.py pattern)
+    _TAG_COLORS = {
+        "you":  "#ffb347",
+        "ai":   "#00d4ff",
+        "err":  "#ff4444",
+        "file": "#00ff9f",
+        "sys":  "#3a8a9a",
+    }
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setReadOnly(True)
+        self.setFont(F(11))
+        self.setStyleSheet("""
+            QTextEdit {
+                background: rgba(8,19,34,215);
+                color: rgba(200,232,248,175);
+                border: 1px solid rgba(0,212,255,28);
+                border-radius: 7px;
+                padding: 8px;
+            }
+            QScrollBar:vertical { width: 5px; background: rgba(0,0,0,0); }
+            QScrollBar::handle:vertical { background: rgba(0,212,255,60); border-radius: 2px; }
+        """)
+        self._queue: list[str] = []
+        self._typing = False
+        self._text   = ""
+        self._pos    = 0
+        self._tag    = "sys"
+        self._tmr = QTimer(self)
+        self._tmr.timeout.connect(self._step)
+        self._sig.connect(self._enqueue)
+
+    def append_log(self, text: str):
+        self._sig.emit(text)
+
+    def _enqueue(self, text: str):
+        self._queue.append(text)
+        if not self._typing:
+            self._next()
+
+    def _next(self):
+        if not self._queue:
+            self._typing = False; return
+        self._typing = True
+        raw = self._queue.pop(0)
+        # detect tag prefix like "YOU: " "AI: " "SYS: " "ERR: " "FILE: "
+        low = raw.lower()
+        for tag in ("you", "ai", "err", "file", "sys"):
+            if low.startswith(tag + ":") or low.startswith(f"[{tag}]"):
+                self._tag = tag; break
+        else:
+            self._tag = "sys"
+        self._text = raw; self._pos = 0
+        self._tmr.start(6)
+
+    def _step(self):
+        if self._pos >= len(self._text):
+            self._tmr.stop()
+            self.append("")   # newline
+            self._next(); return
+        chunk = self._text[self._pos: self._pos + 3]
+        col   = self._TAG_COLORS.get(self._tag, "#3a8a9a")
+        self.moveCursor(self.textCursor().MoveOperation.End)
+        self.setTextColor(QColor(col))
+        self.insertPlainText(chunk)
+        self.moveCursor(self.textCursor().MoveOperation.End)
+        self._pos += 3
+
+
+class FileDropCard(QWidget):
+    file_selected = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._hover   = False
+        self._tick    = 0
+        self._current = None
+        self.setFixedHeight(80)
+        self.setAcceptDrops(True)
+        t = QTimer(self); t.timeout.connect(self._step); t.start(60)
+
+    def current_file(self) -> str | None: return self._current
+    def _step(self): self._tick += 1; self.update()
+    def enterEvent(self, _): self._hover = True;  self.update()
+    def leaveEvent(self, _): self._hover = False; self.update()
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls(): e.acceptProposedAction()
+    def dropEvent(self, e):
+        urls = e.mimeData().urls()
+        if urls:
+            path = urls[0].toLocalFile()
+            self._current = path
+            self.file_selected.emit(path)
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W, H = self.width(), self.height()
+        alpha = int(45 + 30 * math.sin(self._tick * 0.1)) if not self._hover else 90
+        p.setPen(QPen(pri(alpha), 1, Qt.PenStyle.DashLine))
+        p.setBrush(QBrush(_c(0, 212, 255, 8 if not self._hover else 18)))
+        p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
+        p.setFont(F(8)); p.setPen(pri(alpha + 40))
+        lbl = "⬡  DROP FILE HERE"
+        fm  = QFontMetrics(p.font())
+        p.drawText((W - fm.horizontalAdvance(lbl)) // 2, H // 2 + 3, lbl)
+        p.setFont(F(7)); p.setPen(DIM)
+        sub = "or click to browse"
+        fm2 = QFontMetrics(p.font())
+        p.drawText((W - fm2.horizontalAdvance(sub)) // 2, H // 2 + 18, sub)
+        p.end()
+
+    def mousePressEvent(self, _):
+        from PyQt6.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(self, "Select file")
+        if path:
+            self._current = path; self.file_selected.emit(path)
+
+
+class LeftPanel(QWidget):
+    def __init__(self, metrics_snapshot_fn, parent=None):
+        """
+        metrics_snapshot_fn: callable () -> dict with keys cpu, mem, disk, net
+        Values are floats 0..1.
+        """
+        super().__init__(parent)
+        self.setFixedWidth(LEFT_W)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(8, 6, 8, 6)
+        lay.setSpacing(5)
+
+        self._status_card = SystemStatusCard()
+
+        def _metric(key, scale=100):
+            def fn():
+                v = metrics_snapshot_fn().get(key, 0.0)
+                return v, f"{int(v * scale)}%"
+            return fn
+
+        lay.addWidget(WorldMapWidget())
+        lay.addWidget(self._status_card)
+        lay.addWidget(MetricCard("CORE PROC", _metric("cpu"),  PRI))
+        lay.addWidget(MetricCard("MEM ARRAY", _metric("mem"),  AMB))
+        lay.addWidget(MetricCard("STORAGE",   _metric("disk"), SUC))
+        lay.addStretch()
+
+    def set_online(self, online: bool):
+        self._status_card.set_online(online)
+
+
+class RightMetricsPanel(QWidget):
+    def __init__(self, metrics_snapshot_fn, parent=None):
+        super().__init__(parent)
+        self.setFixedWidth(RIGHT_W)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(8, 6, 8, 6)
+        lay.setSpacing(5)
+
+        def net_fn():
+            v = metrics_snapshot_fn().get("net", 0.0)
+            return v, f"{int(v * 999)}K"
+
+        self._comms = CommsCard()
+        self._sess  = SessionCard()
+        lay.addWidget(MetricCard("COMMS BW", net_fn, pri(220)))
+        lay.addWidget(self._comms)
+        lay.addWidget(self._sess)
+        lay.addStretch()
+
+    def inc_ops(self): self._sess.inc_ops()
+
+
+class ActivityPanel(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedWidth(RIGHT_W)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(10, 8, 10, 8)
+        lay.setSpacing(8)
+
+        lbl_log = QLabel("◈  ACTIVITY LOG")
+        lbl_log.setFont(F(9, True))
+        lbl_log.setStyleSheet(f"color: {PRI.name()};")
+        lay.addWidget(lbl_log)
+
+        self._log = LogWidget()
+        lay.addWidget(self._log, 1)
+
+        lbl_file = QLabel("⬡  FILE UPLOAD")
+        lbl_file.setFont(F(9, True))
+        lbl_file.setStyleSheet(f"color: {AMB.name()};")
+        lay.addWidget(lbl_file)
+
+        self._drop = FileDropCard()
+        lay.addWidget(self._drop)
+
+        lbl_chat = QLabel("◎  COMMAND INPUT")
+        lbl_chat.setFont(F(9, True))
+        lbl_chat.setStyleSheet(f"color: {PRI.name()};")
+        lay.addWidget(lbl_chat)
+
+        row = QWidget(); ilay = QHBoxLayout(row)
+        ilay.setContentsMargins(0, 0, 0, 0); ilay.setSpacing(6)
+        self._input = QLineEdit()
+        self._input.setPlaceholderText("Type a command...")
+        self._input.setFont(F(9))
+        self._input.setStyleSheet("""
+            QLineEdit {
+                background: rgba(8,19,34,215); color: rgba(200,232,248,200);
+                border: 1px solid rgba(0,212,255,50); border-radius: 6px; padding: 6px 8px;
+            }
+            QLineEdit:focus { border-color: rgba(0,212,255,140); }
+        """)
+        ilay.addWidget(self._input, 1)
+        btn = QPushButton("▶"); btn.setFixedSize(32, 32); btn.setFont(F(8, True))
+        btn.setStyleSheet(f"""
+            QPushButton {{ background: rgba(0,212,255,25); color: {PRI.name()};
+                border: 1px solid rgba(0,212,255,80); border-radius: 6px; }}
+            QPushButton:hover {{ background: rgba(0,212,255,55); }}
+        """)
+        ilay.addWidget(btn)
+        lay.addWidget(row)
+
+    def append_log(self, text: str): self._log.append_log(text)
+    def current_file(self) -> str | None: return self._drop.current_file()
+    def on_text_command_changed(self, cb): self._input.returnPressed.connect(lambda: cb(self._input.text()))
