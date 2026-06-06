@@ -15,6 +15,8 @@ def get_base_dir():
 BASE_DIR         = get_base_dir()
 PROJECTS_DIR     = Path.home() / "Desktop" / "VikoProjects"
 MAX_FIX_ATTEMPTS = 5
+MODEL_PLANNER  = "gemini-2.0-flash"
+MODEL_WRITER   = "gemini-2.0-flash"
 from viko.self_engineer.llm import generate_text as _llm
 
 class _Response:
