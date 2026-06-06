@@ -94,3 +94,66 @@ class FloatingArc(QWidget):
         p.setPen(QPen(pri(alpha), 1.3)); p.drawPath(path)
         self._draw(p, W, H, self._tick, self._state)
         p.end()
+
+
+def _hdr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
+    pw    = int(W * 0.50)
+    px    = (W - pw) // 2
+    slant = 30
+    x1    = px + slant + 10
+    x2    = px + pw - slant - 10
+    cx    = W // 2
+
+    p.setFont(F(8, True)); p.setPen(pri(100))
+    p.drawText(x1, H // 2 - 1, "B.1.0.0")
+    p.setFont(F(7)); p.setPen(pri(55))
+    p.drawText(x1, H // 2 + 15, "VIKO ASSISTANT")
+
+    p.setFont(F(18, True)); p.setPen(PRI)
+    fm = QFontMetrics(p.font())
+    titl = "VIKO"
+    p.drawText(cx - fm.horizontalAdvance(titl) // 2, H // 2 + 7, titl)
+
+    p.setFont(F(8)); p.setPen(pri(70))
+    sub = "JUST A RATHER VERY INTELLIGENT SYSTEM"
+    fm2 = QFontMetrics(p.font())
+    p.drawText(cx - fm2.horizontalAdvance(sub) // 2, H // 2 + 21, sub)
+
+    p.setFont(F(12, True)); p.setPen(AMB)
+    clk = time.strftime("%H:%M:%S")
+    fm3 = QFontMetrics(p.font())
+    p.drawText(x2 - fm3.horizontalAdvance(clk), H // 2 + 7, clk)
+
+    p.setFont(F(7)); p.setPen(DIM)
+    dat = time.strftime("%a  %d %b %Y")
+    fm4 = QFontMetrics(p.font())
+    p.drawText(x2 - fm4.horizontalAdvance(dat), H // 2 + 21, dat)
+
+
+def _ftr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
+    pw    = int(W * 0.50)
+    px    = (W - pw) // 2
+    slant = 30
+    x1    = px + slant + 10
+    x2    = px + pw - slant - 10
+    cx    = W // 2
+    cy    = H // 2 + 6
+
+    p.setFont(F(7)); p.setPen(pri(100))
+    p.drawText(x1, cy - 3, "[F4] Mute  ·  [F11] Fullscreen")
+
+    ma = int(150 + 105 * abs(math.sin(tick * 0.14)))
+    p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(suc(ma)))
+    p.drawEllipse(QPointF(x1 + 2, cy + 11), 3.5, 3.5)
+    p.setFont(F(7)); p.setPen(suc(160))
+    p.drawText(x1 + 10, cy + 16, "MIC ACTIVE")
+
+    p.setFont(F(8, True)); p.setPen(pri(90))
+    brand = "VIKO  ·  B.1.0.0  ·  CLASSIFIED"
+    fm = QFontMetrics(p.font())
+    p.drawText(cx - fm.horizontalAdvance(brand) // 2, cy + 7, brand)
+
+    p.setFont(F(7)); p.setPen(pri(65))
+    copy = "© VIKO INDUSTRIES"
+    fm2 = QFontMetrics(p.font())
+    p.drawText(x2 - fm2.horizontalAdvance(copy), cy + 7, copy)
