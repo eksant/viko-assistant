@@ -1,6 +1,6 @@
 # viko/ui_widgets.py
 from __future__ import annotations
-import math, time
+import math, time, os
 from PyQt6.QtCore import Qt, QTimer, QRectF, QPointF, pyqtSignal
 from PyQt6.QtGui import (
     QColor, QPainter, QPainterPath, QPen, QBrush,
@@ -381,8 +381,8 @@ class CommsCard(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._tick = 0
-        self._latency_ms = 180   # updated via set_latency(ms)
-        self.setFixedHeight(72)
+        self._latency_ms = 180
+        self.setFixedHeight(102)
         t = QTimer(self); t.timeout.connect(self._step); t.start(60)
 
     def set_latency(self, ms: int): self._latency_ms = ms; self.update()
@@ -396,19 +396,45 @@ class CommsCard(QWidget):
         p.setPen(QPen(pri(28), 1)); p.setBrush(QBrush(_c(8, 19, 34, 215)))
         p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
 
+        # Header
         p.setFont(F(9)); p.setPen(DIM)
         p.drawText(10, 17, "COMMS  ·  GEMINI API")
 
+        # Gemini online dot + label
         da = int(210 + 45 * math.sin(self._tick * 0.10))
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(suc(da)))
         p.drawEllipse(QRectF(10, 25, 9, 9))
         p.setFont(F(13, True)); p.setPen(SUC)
         p.drawText(25, 37, "ONLINE")
 
+        # Separator
+        p.setPen(QPen(pri(25), 1))
+        p.drawLine(10, 44, W - 10, 44)
+
+        # Anthropic / Claude indicator
+        claude_active = bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+        if claude_active:
+            ca = int(190 + 55 * math.sin(self._tick * 0.07))
+            dot_color = amb(ca)
+            lbl_color = AMB
+            lbl_text  = "ACTIVE"
+        else:
+            dot_color = pri(55)
+            lbl_color = DIM
+            lbl_text  = "INACTIVE"
+
+        p.setFont(F(9)); p.setPen(DIM)
+        p.drawText(10, 59, "CLAUDE  ·  ANTHROPIC")
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(dot_color))
+        p.drawEllipse(QRectF(10, 65, 8, 8))
+        p.setFont(F(10, True)); p.setPen(lbl_color)
+        p.drawText(24, 76, lbl_text)
+
+        # Latency bar
         lat = min(1.0, self._latency_ms / 1000)
         p.setFont(F(9)); p.setPen(DIM)
-        p.drawText(10, 57, "LATENCY")
-        bx, by, bw, bh = 62, 49, W - 72, 5
+        p.drawText(10, 96, "LATENCY")
+        bx, by, bw, bh = 62, 88, W - 72, 5
         p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(pri(20)))
         p.drawRoundedRect(QRectF(bx, by, bw, bh), 2, 2)
         lg = QLinearGradient(bx, 0, bx + bw, 0)
@@ -416,7 +442,7 @@ class CommsCard(QWidget):
         p.setBrush(QBrush(lg))
         p.drawRoundedRect(QRectF(bx, by, bw * lat, bh), 2, 2)
         p.setFont(F(9)); p.setPen(suc(175))
-        p.drawText(int(bx + bw * lat) + 4, 57, f"{self._latency_ms}ms")
+        p.drawText(int(bx + bw * lat) + 4, 96, f"{self._latency_ms}ms")
         p.end()
 
 
