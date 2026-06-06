@@ -303,3 +303,80 @@ class WorldMapWidget(QWidget):
         p.setFont(F(7)); p.setPen(amb(175))
         p.drawText(0, H, "03°08′N  101°42′E")
         p.end()
+
+
+class CommsCard(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._tick = 0
+        self._latency_ms = 180   # updated via set_latency(ms)
+        self.setFixedHeight(72)
+        t = QTimer(self); t.timeout.connect(self._step); t.start(60)
+
+    def set_latency(self, ms: int): self._latency_ms = ms; self.update()
+
+    def _step(self): self._tick += 1; self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W, H = self.width(), self.height()
+        p.setPen(QPen(pri(28), 1)); p.setBrush(QBrush(_c(8, 19, 34, 215)))
+        p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
+
+        p.setFont(F(7)); p.setPen(DIM)
+        p.drawText(10, 16, "COMMS  ·  GEMINI API")
+
+        da = int(210 + 45 * math.sin(self._tick * 0.10))
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(suc(da)))
+        p.drawEllipse(QRectF(10, 24, 8, 8))
+        p.setFont(F(11, True)); p.setPen(SUC)
+        p.drawText(24, 35, "ONLINE")
+
+        lat = min(1.0, self._latency_ms / 1000)
+        p.setFont(F(7)); p.setPen(DIM)
+        p.drawText(10, 54, "LATENCY")
+        bx, by, bw, bh = 58, 46, W - 68, 5
+        p.setPen(Qt.PenStyle.NoPen); p.setBrush(QBrush(pri(20)))
+        p.drawRoundedRect(QRectF(bx, by, bw, bh), 2, 2)
+        lg = QLinearGradient(bx, 0, bx + bw, 0)
+        lg.setColorAt(0, suc(175)); lg.setColorAt(1, pri(115))
+        p.setBrush(QBrush(lg))
+        p.drawRoundedRect(QRectF(bx, by, bw * lat, bh), 2, 2)
+        p.setFont(F(7)); p.setPen(suc(175))
+        p.drawText(int(bx + bw * lat) + 4, 54, f"{self._latency_ms}ms")
+        p.end()
+
+
+class SessionCard(QWidget):
+    _t0 = time.time()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._tick = 0
+        self._ops  = 0   # updated via inc_ops()
+        self.setFixedHeight(60)
+        t = QTimer(self); t.timeout.connect(self._step); t.start(1000)
+
+    def inc_ops(self): self._ops += 1; self.update()
+
+    def _step(self): self._tick += 1; self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        W, H = self.width(), self.height()
+        p.setPen(QPen(pri(28), 1)); p.setBrush(QBrush(_c(8, 19, 34, 215)))
+        p.drawRoundedRect(QRectF(2, 2, W - 4, H - 4), 7, 7)
+
+        e = int(time.time() - self._t0)
+        ts = f"{e // 3600:02d}:{(e % 3600) // 60:02d}:{e % 60:02d}"
+
+        p.setFont(F(7)); p.setPen(DIM)
+        p.drawText(10, 16, "SESSION INTEL")
+        p.setFont(F(12, True)); p.setPen(AMB)
+        p.drawText(10, 38, ts)
+        p.setFont(F(7)); p.setPen(pri(135))
+        p.drawText(10, 53, "UPTIME")
+        p.drawText(W // 2, 53, f"OPS: {self._ops}")
+        p.end()
