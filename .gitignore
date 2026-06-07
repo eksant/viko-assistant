@@ -34,6 +34,9 @@ memory/*/
 workspace/**
 !workspace/**/.gitkeep
 
+# Social media content (private drafts)
+social-media/
+
 # Logs
 *.log
 /tmp/viko*.log
