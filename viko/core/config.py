@@ -37,6 +37,10 @@ def get_openrouter_key() -> str:
     return key
 
 
+def get_owner_passphrase() -> str:
+    return os.environ.get("OWNER_PASSPHRASE", "").strip()
+
+
 def get_os() -> str:
     return os.environ.get("OS_SYSTEM", "mac").lower()
 
@@ -46,7 +50,12 @@ def is_mac()     -> bool: return get_os() == "mac"
 def is_linux()   -> bool: return get_os() == "linux"
 
 
-def save_keys(gemini_api_key: str = "", openrouter_api_key: str = "", os_system: str = "") -> None:
+def save_keys(
+    gemini_api_key: str = "",
+    openrouter_api_key: str = "",
+    os_system: str = "",
+    owner_passphrase: str = "",
+) -> None:
     data = _load_env_dict()
     if gemini_api_key.strip():
         data["GEMINI_API_KEY"] = gemini_api_key.strip()
@@ -57,6 +66,9 @@ def save_keys(gemini_api_key: str = "", openrouter_api_key: str = "", os_system:
     if os_system.strip():
         data["OS_SYSTEM"] = os_system.strip()
         os.environ["OS_SYSTEM"] = os_system.strip()
+    if owner_passphrase.strip():
+        data["OWNER_PASSPHRASE"] = owner_passphrase.strip()
+        os.environ["OWNER_PASSPHRASE"] = owner_passphrase.strip()
     _write_env_dict(data)
 
 
