@@ -30,7 +30,7 @@ from viko.ui.widgets import (
     HudCanvas, LeftPanel, RightMetricsPanel, ActivityPanel, BootScreen,
 )
 from viko.ui.browser_panel import BrowserPanel
-from viko.core.config import is_configured, get_gemini_key
+from viko.core.config import is_configured, get_gemini_key, save_keys
 
 
 # ─── System Metrics ───────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ class _SysMetrics:
 
 # ─── Setup Overlay ────────────────────────────────────────────────────────────
 class SetupOverlay(QWidget):
-    done = pyqtSignal(str)   # emits gemini_api_key
+    done = pyqtSignal(str, str)   # emits (gemini_api_key, owner_passphrase)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -106,6 +106,21 @@ class SetupOverlay(QWidget):
         """)
         lay.addWidget(self._key, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        lbl2 = QLabel("Owner Passphrase (bypass verifikasi suara)")
+        lbl2.setFont(F(9)); lbl2.setStyleSheet(f"color: {TXT.name()};")
+        lbl2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(lbl2)
+
+        self._pass = QLineEdit(); self._pass.setEchoMode(QLineEdit.EchoMode.Password)
+        self._pass.setFont(F(9)); self._pass.setFixedWidth(360)
+        self._pass.setPlaceholderText("Kosongkan jika tidak digunakan")
+        self._pass.setStyleSheet("""
+            QLineEdit { background: #010d14; color: #8ffcff;
+                        border: 1px solid #0d3347; border-radius: 4px; padding: 8px; }
+            QLineEdit:focus { border-color: #00d4ff; }
+        """)
+        lay.addWidget(self._pass, alignment=Qt.AlignmentFlag.AlignCenter)
+
         btn = QPushButton("INITIALISE VIKO")
         btn.setFont(F(9, True)); btn.setFixedWidth(200)
         btn.setStyleSheet(f"""
@@ -115,12 +130,13 @@ class SetupOverlay(QWidget):
         """)
         btn.clicked.connect(self._submit)
         self._key.returnPressed.connect(self._submit)
+        self._pass.returnPressed.connect(self._submit)
         lay.addWidget(btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def _submit(self):
         key = self._key.text().strip()
         if key:
-            self.done.emit(key)
+            self.done.emit(key, self._pass.text().strip())
 
 
 # ─── Main Window ──────────────────────────────────────────────────────────────
@@ -603,8 +619,8 @@ class MainWindow(QMainWindow):
         self._right_metrics.inc_ops()
 
     # ── API key ───────────────────────────────────────────────────────────
-    def _on_api_key(self, key: str):
-        import os; os.environ["GEMINI_API_KEY"] = key
+    def _on_api_key(self, key: str, passphrase: str):
+        save_keys(gemini_api_key=key, owner_passphrase=passphrase)
         self._ready = True
         if self._overlay:
             self._overlay.hide(); self._overlay = None
