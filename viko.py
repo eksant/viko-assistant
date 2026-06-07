@@ -1322,9 +1322,12 @@ class VikoLive:
                     print(f"[Conversation] Session end failed: {_e}")
 
             self.set_speaking(False)
+            self.ui.set_state("OFFLINE")
+            print("[Viko] Connection lost — offline mode")
+            await self._offline_mode()
             self.ui.set_state("THINKING")
-            print("[Viko] Reconnecting in 3s...")
-            await asyncio.sleep(3)
+            print("[Viko] Reconnecting...")
+            await asyncio.sleep(1)
 
 
 def main():
