@@ -153,7 +153,7 @@ def should_extract_memory(user_text: str, viko_text: str, api_key: str = "") -> 
             f"Reply only YES or NO.\n\nConversation:\n{combined}",
             system="You are a memory relevance checker. Reply only YES or NO.",
         )
-        return "YES" in result.upper()
+        return bool(result) and "YES" in result.upper()
 
     except Exception as e:
         print(f"[Memory] Stage1 check failed: {e}")
@@ -195,6 +195,8 @@ def extract_memory(user_text: str, viko_text: str, api_key: str = "") -> dict:
             system="Return ONLY valid JSON. No markdown, no explanation, no extra text.",
         )
 
+        if not raw:
+            return {}
         clean = raw.strip()
         clean = re.sub(r"```(?:json)?", "", clean).strip().rstrip("`").strip()
 
