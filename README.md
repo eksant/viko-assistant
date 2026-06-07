@@ -6,6 +6,15 @@ VIKO is a personal AI voice assistant built with PyQt6 and Google Gemini Live AP
 
 ---
 
+## Preview
+
+| Dashboard | Text Chat | Voice Chat |
+|:---------:|:---------:|:----------:|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Text Chat](docs/screenshots/text-chat.png) | ![Voice Chat](docs/screenshots/voice-chat.png) |
+| Live metrics, GPS map, system status | Activity log with conversation history | Real-time audio visualizer while speaking |
+
+---
+
 ## Features
 
 - **Real-time voice conversation** — powered by Gemini Live API (native audio streaming)
