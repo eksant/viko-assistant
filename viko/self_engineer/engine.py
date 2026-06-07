@@ -102,7 +102,7 @@ class SelfEngineerEngine:
         target_files: list[str] | None = None,
         speak=None,
     ) -> str:
-        from viko.self_engineer import analyzer, planner, generator, backup, tester, restarter
+        from viko.self_engineer import analyzer, planner, backup, restarter
 
         if action == "cancel":
             _clear_pending_plan()
@@ -152,7 +152,7 @@ class SelfEngineerEngine:
         return f"{summary} Lanjutkan?"
 
     def _execute_plan(self, plan: dict, context: dict, speak=None) -> str:
-        from viko.self_engineer import generator, backup, tester, restarter
+        from viko.self_engineer import generator, backup, tester
 
         try:
             changes = generator.generate(plan, context)

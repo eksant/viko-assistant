@@ -13,7 +13,7 @@ _os.environ.setdefault(
 import psutil
 
 from PyQt6.QtCore import Qt, QTimer, QPoint, pyqtSignal, pyqtSlot
-from PyQt6.QtGui  import QKeySequence, QShortcut, QIcon, QPixmap, QPainter, QRadialGradient, QPen, QColor, QAction
+from PyQt6.QtGui  import QKeySequence, QShortcut, QIcon, QPixmap, QPainter, QPen, QColor, QAction
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QStackedWidget, QStackedLayout, QLabel, QLineEdit,

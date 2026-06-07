@@ -22,7 +22,6 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from datetime import datetime
 
 def _get_api_key() -> str:
     from viko.core.config import get_gemini_key

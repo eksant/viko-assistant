@@ -10,7 +10,6 @@ import cv2
 import mss
 import mss.tools
 import sounddevice as sd
-import numpy as np
 from pathlib import Path
 
 try:
