@@ -1277,7 +1277,10 @@ class VikoLive:
                 async for response in self.session.receive():
 
                     if response.data:
-                        self.audio_in_queue.put_nowait(response.data)
+                        try:
+                            self.audio_in_queue.put_nowait(response.data)
+                        except asyncio.QueueFull:
+                            pass  # drop chunk under load; preferable to crashing
 
                     if response.server_content:
                         sc = response.server_content
