@@ -192,3 +192,23 @@ header {
 .stat-block.amber .stat-number { color: var(--amb); }
 .stat-block.green  .stat-number { color: var(--suc); }
 .stat-label { font-size: 13px; color: var(--body); letter-spacing: 1px; }
+
+/* ════ FEATURES ════ */
+.features { padding: 96px 64px; border-bottom: 1px solid var(--border); }
+.features-intro { margin-bottom: 48px; }
+.features-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border);
+}
+.feature-card {
+  background: var(--card); padding: 28px 24px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: background 0.2s;
+}
+.feature-card:hover { background: #060d16; }
+.feature-icon { font-size: 20px; color: var(--pri); line-height: 1; }
+.feature-card.amber .feature-icon { color: var(--amb); }
+.feature-card.green  .feature-icon { color: var(--suc); }
+.feature-name { font-size: 13px; font-weight: bold; color: var(--txt); letter-spacing: 1.5px; line-height: 1.3; }
+.feature-desc { font-size: 14px; color: var(--body); line-height: 1.7; flex: 1; }
