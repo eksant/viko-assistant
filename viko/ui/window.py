@@ -736,21 +736,15 @@ class MainWindow(QMainWindow):
             self._cl_manager.setDistanceFilter_(50.0)
             self._cl_manager.setDesiredAccuracy_(100.0)  # kCLLocationAccuracyHundredMeters
 
-            status = CLLocationManager.authorizationStatus()
+            # Use instance method — class method is deprecated on macOS 14+
+            status = self._cl_manager.authorizationStatus()
             if status in (AUTH_AUTHORIZED, AUTH_WHEN_IN_USE):
                 self._cl_manager.startUpdatingLocation()
             elif status == AUTH_NOT_DETERMINED:
-                # For bundled apps this triggers a dialog; for CLI it silently
-                # stays NotDetermined — user must grant via System Settings.
                 self._cl_manager.requestWhenInUseAuthorization()
-                self._log_sig.emit(
-                    "SYS: Lokasi GPS: buka System Settings → Privacy & Security → "
-                    "Location Services → aktifkan untuk Terminal, lalu restart Viko."
-                )
             elif status == AUTH_DENIED:
                 self._log_sig.emit(
-                    "SYS: Lokasi GPS diblokir. System Settings → Privacy & Security → "
-                    "Location Services → aktifkan untuk Terminal."
+                    "SYS: Lokasi GPS diblokir. Buka VIKO.app agar permission dialog muncul."
                 )
 
             labels = {0: "not_determined", 1: "restricted", 2: "denied",
