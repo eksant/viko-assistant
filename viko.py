@@ -66,7 +66,7 @@ CHANNELS            = 1
 SEND_SAMPLE_RATE    = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE          = 1024
-SPEECH_THRESHOLD    = 300   # int16 RMS — active speech
+SPEECH_THRESHOLD    = 40    # int16 RMS — active speech (MacBook Air mic level)
 SILENCE_CHUNKS      = 20    # ~1.3s silence ends an utterance
 MIN_SPEECH_CHUNKS   = 8     # ~512ms minimum speech to process
 
@@ -1145,54 +1145,74 @@ class VikoLive:
             await self.session.send_realtime_input(media=msg)
 
     async def _listen_audio(self):
+        import threading as _threading
+        import queue as _queue
+
         try:
             dev = sd.query_devices(kind='input')
             print(f"[Viko] Mic: {dev['name']} @ {SEND_SAMPLE_RATE}Hz")
         except Exception:
             print("[Viko] Mic started")
-        loop = asyncio.get_event_loop()
 
-        def callback(indata, frames, time_info, status):
-            with self._speaking_lock:
-                viko_speaking = self._is_speaking
-            if viko_speaking or self.ui.muted or self.ui.paused:
-                return
-            loop.call_soon_threadsafe(
-                self.raw_queue.put_nowait,
-                {"data": indata.tobytes(), "mime_type": "audio/pcm"}
-            )
+        # Bridge: sounddevice thread → queue.Queue → asyncio raw_queue
+        _tq: _queue.Queue = _queue.Queue(maxsize=400)
+        _stop = _threading.Event()
+
+        def _audio_thread():
+            try:
+                with sd.RawInputStream(
+                    samplerate=SEND_SAMPLE_RATE,
+                    channels=CHANNELS,
+                    dtype="int16",
+                    blocksize=CHUNK_SIZE,
+                ) as stream:
+                    print("[Viko] Mic stream open")
+                    while not _stop.is_set():
+                        data, _ = stream.read(CHUNK_SIZE)
+                        with self._speaking_lock:
+                            viko_speaking = self._is_speaking
+                        if viko_speaking or self.ui.muted or self.ui.paused:
+                            continue
+                        try:
+                            _tq.put_nowait({"data": bytes(data), "mime_type": "audio/pcm"})
+                        except Exception:
+                            pass  # drop if full
+            except Exception as _e:
+                print(f"[Viko] Mic error: {_e}")
+
+        t = _threading.Thread(target=_audio_thread, daemon=True)
+        t.start()
 
         try:
-            with sd.InputStream(
-                samplerate=SEND_SAMPLE_RATE,
-                channels=CHANNELS,
-                dtype="int16",
-                blocksize=CHUNK_SIZE,
-                callback=callback,
-            ):
-                print("[Viko] Mic stream open")
-                while True:
-                    await asyncio.sleep(0.1)
-        except Exception as e:
-            print(f"[Viko] Mic error: {e}")
-            raise
+            while True:
+                # Drain threading.Queue into asyncio raw_queue
+                while not _tq.empty():
+                    try:
+                        self.raw_queue.put_nowait(_tq.get_nowait())
+                    except Exception:
+                        break
+                await asyncio.sleep(0.02)
+        finally:
+            _stop.set()
 
     async def _verify_and_forward(self):
-        """VAD gate: collect utterances from raw_queue, verify speaker, forward to out_queue.
+        """Forward audio to out_queue with periodic speaker verification (every ~2s).
 
+        All chunks are forwarded immediately. Verification runs every VERIFY_CHUNKS
+        frames — if enrolled and verification fails, audio is gated until next pass.
+        This avoids VAD-threshold calibration issues with low-gain microphones.
         Also handles in-session re-enrollment when self._enrolling is True.
         """
         loop = asyncio.get_running_loop()
-        buf:           list[dict] = []
-        silence_count: int  = 0
-        speech_count:  int  = 0
-        in_speech:     bool = False
+        verify_buf:   list[bytes] = []
+        VERIFY_CHUNKS = 32          # 32 × 64ms ≈ 2s at 16kHz / CHUNK_SIZE=1024
+        verified_ok   = True        # start open; updated after first periodic check
 
         while True:
             item        = await self.raw_queue.get()
             chunk_bytes = item["data"]
 
-            # Re-enrollment mode: collect audio, skip normal VAD
+            # Re-enrollment: collect audio, skip normal processing
             if self._enrolling:
                 self._enroll_buf.append(item)
                 if len(self._enroll_buf) >= self._enroll_target:
@@ -1201,35 +1221,22 @@ class VikoLive:
                     self._enroll_buf = []
                     await loop.run_in_executor(None, self._sv.enroll, pcm)
                     self.ui.write_log("SYS: Suara berhasil didaftarkan.")
+                    verified_ok = True
                 continue
 
-            rms = _rms(chunk_bytes)
+            # Accumulate for periodic verification
+            verify_buf.append(chunk_bytes)
+            if len(verify_buf) >= VERIFY_CHUNKS:
+                pcm = b"".join(verify_buf)
+                verify_buf = verify_buf[-8:]  # keep 0.5s overlap
+                if self._sv.is_enrolled() and not self._verification_bypass:
+                    verified_ok = await loop.run_in_executor(
+                        None, self._sv.verify, pcm
+                    )
 
-            if rms > SPEECH_THRESHOLD:
-                buf.append(item)
-                speech_count += 1
-                silence_count = 0
-                in_speech = True
-            elif in_speech:
-                buf.append(item)
-                silence_count += 1
-                if silence_count >= SILENCE_CHUNKS:
-                    if speech_count >= MIN_SPEECH_CHUNKS:
-                        pcm = b"".join(i["data"] for i in buf)
-                        is_owner = (
-                            self._verification_bypass
-                            or not self._sv.is_enrolled()
-                            or await loop.run_in_executor(
-                                None, self._sv.verify, pcm
-                            )
-                        )
-                        if is_owner:
-                            for i in buf:
-                                await self.out_queue.put(i)
-                    buf           = []
-                    silence_count = 0
-                    speech_count  = 0
-                    in_speech     = False
+            # Forward to Gemini
+            if self._verification_bypass or not self._sv.is_enrolled() or verified_ok:
+                await self.out_queue.put(item)
 
     async def _receive_audio(self):
         print("[Viko] Receive started")

@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 
 SAMPLE_RATE          = 16000
-SIMILARITY_THRESHOLD = 0.75
+SIMILARITY_THRESHOLD = 0.65
 _PROFILE_PATH = Path(__file__).resolve().parent.parent.parent / "memory" / "voice_profile.npy"
 
 
