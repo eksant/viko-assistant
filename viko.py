@@ -673,7 +673,7 @@ class VikoLive:
 
     async def _offline_respond(self, text: str) -> None:
         """Get LLM reply for text and speak via macOS say. Used in offline mode."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             from viko.core.client import LLMClient
             system = (
@@ -712,7 +712,7 @@ class VikoLive:
         from viko.core.offline_stt import OfflineSTT
 
         stt = OfflineSTT()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         audio_q: asyncio.Queue = asyncio.Queue()
 
         SPEECH_THRESHOLD  = 300
