@@ -1381,10 +1381,16 @@ class VikoLive:
             latency="high",    # bigger internal buffer = stutter-resistant
         )
         stream.start()
+        loop = asyncio.get_running_loop()
+        _speak_off_handle = None
         try:
             while True:
                 # Wait for first chunk
                 chunk = await self.audio_in_queue.get()
+                # Cancel any pending speaking=False — new audio arrived
+                if _speak_off_handle is not None:
+                    _speak_off_handle.cancel()
+                    _speak_off_handle = None
                 self.set_speaking(True)
                 # Drain any queued chunks without waiting (batch write reduces
                 # asyncio round-trips and keeps PortAudio buffer fed)
@@ -1397,11 +1403,9 @@ class VikoLive:
                 data = b"".join(chunks)
                 await asyncio.to_thread(stream.write, data)
                 if self.audio_in_queue.empty():
-                    # Brief debounce: streaming chunks can have inter-chunk gaps.
-                    # Only open the mic if the queue is still empty after 150ms.
-                    await asyncio.sleep(0.15)
-                    if self.audio_in_queue.empty():
-                        self.set_speaking(False)
+                    # Debounce: schedule speaking=False 150ms from now.
+                    # call_later doesn't block consumption so the queue stays drained.
+                    _speak_off_handle = loop.call_later(0.15, self.set_speaking, False)
         except Exception as e:
             print(f"[Viko] Playback error: {e}")
             raise
