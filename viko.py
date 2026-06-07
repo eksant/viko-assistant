@@ -1150,7 +1150,6 @@ class VikoLive:
 
     async def _listen_audio(self):
         import threading as _threading
-        import queue as _queue
 
         try:
             dev = sd.query_devices(kind='input')
@@ -1158,8 +1157,7 @@ class VikoLive:
         except Exception:
             print("[Viko] Mic started")
 
-        # Bridge: sounddevice thread → queue.Queue → asyncio raw_queue
-        _tq: _queue.Queue = _queue.Queue(maxsize=400)
+        loop = asyncio.get_running_loop()
         _stop = _threading.Event()
 
         def _audio_thread():
@@ -1177,10 +1175,11 @@ class VikoLive:
                             viko_speaking = self._is_speaking
                         if viko_speaking or self.ui.muted or self.ui.paused:
                             continue
+                        item = {"data": bytes(data), "mime_type": "audio/pcm"}
                         try:
-                            _tq.put_nowait({"data": bytes(data), "mime_type": "audio/pcm"})
+                            loop.call_soon_threadsafe(self.raw_queue.put_nowait, item)
                         except Exception:
-                            pass  # drop if full
+                            pass  # drop if loop is closed
             except Exception as _e:
                 print(f"[Viko] Mic error: {_e}")
 
@@ -1188,14 +1187,7 @@ class VikoLive:
         t.start()
 
         try:
-            while True:
-                # Drain threading.Queue into asyncio raw_queue
-                while not _tq.empty():
-                    try:
-                        self.raw_queue.put_nowait(_tq.get_nowait())
-                    except Exception:
-                        break
-                await asyncio.sleep(0.02)
+            await asyncio.Event().wait()  # park coroutine; _audio_thread runs independently
         finally:
             _stop.set()
 
