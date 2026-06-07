@@ -20,12 +20,16 @@ class TestOfflineSTT:
         assert stt._model is None
 
     def test_load_creates_whisper_model(self):
-        """_load() must call WhisperModel with expected arguments."""
+        """_load() must call WhisperModel with correct args and a project-local download_root."""
         stt = OfflineSTT()
         with patch("faster_whisper.WhisperModel") as mock_cls:
             mock_cls.return_value = MagicMock()
             stt._load()
-            mock_cls.assert_called_once_with("small", device="cpu", compute_type="int8")
+            call_kwargs = mock_cls.call_args
+            assert call_kwargs[0][0] == "small"
+            assert call_kwargs[1]["device"] == "cpu"
+            assert call_kwargs[1]["compute_type"] == "int8"
+            assert "models/whisper" in call_kwargs[1]["download_root"]
             assert stt._model is not None
 
     def test_transcribe_pcm_calls_load_on_first_use(self):

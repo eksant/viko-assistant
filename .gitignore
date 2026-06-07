@@ -36,3 +36,6 @@ viko/logs/
 
 # SelfEngineer backups
 viko/self_engineer/backups/
+
+# Whisper model cache (auto-downloaded on first offline STT use, ~500 MB)
+models/
