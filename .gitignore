@@ -2,6 +2,9 @@
 .DS_Store
 **/.DS_Store
 
+# Brainstorming / superpowers session files
+.superpowers/
+
 # Secrets & config
 .env
 config/api_keys.json
