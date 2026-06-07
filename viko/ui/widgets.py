@@ -105,7 +105,7 @@ def _hdr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
     cx    = W // 2
 
     p.setFont(F(10, True)); p.setPen(pri(100))
-    p.drawText(x1, H // 2 - 1, "B.1.0.0")
+    p.drawText(x1, H // 2 - 1, "B.0.1.0")
     p.setFont(F(9)); p.setPen(pri(55))
     p.drawText(x1, H // 2 + 15, "VIKO ASSISTANT")
 
@@ -149,7 +149,7 @@ def _ftr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
     p.drawText(x1 + 12, cy + 17, "MIC ACTIVE")
 
     p.setFont(F(10, True)); p.setPen(pri(90))
-    brand = "VIKO  ·  B.1.0.0  ·  CLASSIFIED"
+    brand = "VIKO  ·  B.0.1.0  ·  CLASSIFIED"
     fm = QFontMetrics(p.font())
     p.drawText(cx - fm.horizontalAdvance(brand) // 2, cy + 8, brand)
 
@@ -254,7 +254,7 @@ class SystemStatusCard(QWidget):
         p.drawText(28, 37, lbl_txt)
 
         p.setFont(F(9)); p.setPen(pri(110))
-        p.drawText(10, H - 7, "B.1.0.0")
+        p.drawText(10, H - 7, "B.0.1.0")
         p.setFont(F(9)); p.setPen(pri(65))
         p.drawText(W // 2, H - 7, "GEMINI API")
         p.end()
