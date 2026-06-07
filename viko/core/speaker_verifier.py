@@ -9,8 +9,10 @@ _PROFILE_PATH = Path(__file__).resolve().parent.parent.parent / "memory" / "voic
 
 class SpeakerVerifier:
     def __init__(self, profile_path: Path = _PROFILE_PATH) -> None:
-        self._path    = profile_path
-        self._encoder = None
+        self._path              = profile_path
+        self._encoder           = None
+        self._stored_embedding: np.ndarray | None = None  # cache — invalidated by enroll()
+        self._is_enrolled_flag: bool | None = None        # cache — avoids Path.exists() on hot path
 
     def _load_encoder(self) -> None:
         from resemblyzer import VoiceEncoder
@@ -25,23 +27,28 @@ class SpeakerVerifier:
         return self._encoder.embed_utterance(wav)
 
     def is_enrolled(self) -> bool:
-        return self._path.exists()
+        if self._is_enrolled_flag is None:
+            self._is_enrolled_flag = self._path.exists()
+        return self._is_enrolled_flag
 
     def enroll(self, pcm_bytes: bytes) -> None:
         embedding = self._embed(pcm_bytes)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         np.save(str(self._path), embedding)
+        self._stored_embedding = embedding   # update cache immediately
+        self._is_enrolled_flag = True        # mark enrolled without re-stat
 
     def similarity(self, pcm_bytes: bytes) -> float:
-        """Return raw cosine similarity (0-1) without threshold check."""
+        """Return cosine similarity (0–1); returns 0.0 for unenrolled or zero-norm vectors."""
         if not self.is_enrolled():
             return 1.0
-        stored    = np.load(str(self._path))
+        if self._stored_embedding is None:
+            self._stored_embedding = np.load(str(self._path))
         candidate = self._embed(pcm_bytes)
-        return float(
-            np.dot(stored, candidate)
-            / (np.linalg.norm(stored) * np.linalg.norm(candidate))
-        )
+        denom = float(np.linalg.norm(self._stored_embedding) * np.linalg.norm(candidate))
+        if denom == 0.0:
+            return 0.0
+        return float(np.dot(self._stored_embedding, candidate) / denom)
 
     def verify(self, pcm_bytes: bytes) -> bool:
         return self.similarity(pcm_bytes) >= SIMILARITY_THRESHOLD

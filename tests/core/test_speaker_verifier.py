@@ -1,5 +1,5 @@
 """Unit tests for viko.core.speaker_verifier.SpeakerVerifier (mocked resemblyzer)."""
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import numpy as np
 import tempfile
 import pytest
@@ -52,3 +52,63 @@ class TestSpeakerVerifier:
     def test_verify_returns_true_when_not_enrolled(self):
         # No profile → open access (enrollment not yet done)
         assert self.sv.verify(_make_pcm()) is True
+
+
+# --- Bug-fix regression tests ---
+
+def _make_verifier_with_profile(tmp_path: Path, embedding: np.ndarray):
+    profile = tmp_path / "voice_profile.npy"
+    np.save(str(profile), embedding)
+    sv = SpeakerVerifier(profile_path=profile)
+    return sv
+
+
+def test_similarity_zero_norm_returns_zero(tmp_path):
+    """similarity() must return 0.0, not NaN, when embedding is a zero vector."""
+    sv = _make_verifier_with_profile(tmp_path, np.array([1.0, 0.0, 0.0]))
+    with patch.object(sv, "_embed", return_value=np.zeros(3)):
+        result = sv.similarity(b"\x00" * 64)
+    assert result == 0.0, f"Expected 0.0, got {result}"
+    assert not np.isnan(result), "similarity() must not return NaN"
+
+
+def test_similarity_loads_profile_once_across_two_calls(tmp_path):
+    """np.load must be called once total across two similarity() calls (cached)."""
+    stored = np.array([1.0, 0.0, 0.0])
+    sv = _make_verifier_with_profile(tmp_path, stored)
+    candidate = np.array([1.0, 0.0, 0.0])
+    with patch.object(sv, "_embed", return_value=candidate):
+        with patch("numpy.load", wraps=np.load) as mock_load:
+            sv.similarity(b"\x00" * 64)
+            sv.similarity(b"\x00" * 64)
+            assert mock_load.call_count == 1, (
+                f"np.load called {mock_load.call_count} times; expected 1 after caching"
+            )
+
+
+def test_is_enrolled_uses_cached_flag_after_enroll(tmp_path):
+    """is_enrolled() must not call Path.exists() after enroll() sets the cache."""
+    sv = SpeakerVerifier(profile_path=tmp_path / "voice_profile.npy")
+    with patch.object(sv, "_embed", return_value=np.array([1.0, 0.0, 0.0])):
+        sv.enroll(b"\x00" * 1024)
+    # Replace _path with a MagicMock — any call to .exists() would be detected
+    mock_path = MagicMock(spec=Path)
+    sv._path = mock_path
+    sv.is_enrolled()
+    sv.is_enrolled()
+    sv.is_enrolled()
+    mock_path.exists.assert_not_called()
+
+
+def test_enroll_invalidates_embedding_cache(tmp_path):
+    """enroll() must update the cached embedding so next similarity() uses new profile."""
+    stored_v1 = np.array([1.0, 0.0, 0.0])
+    sv = _make_verifier_with_profile(tmp_path, stored_v1)
+    with patch.object(sv, "_embed", return_value=stored_v1):
+        sv.similarity(b"\x00" * 64)  # populates cache with v1
+    stored_v2 = np.array([0.0, 1.0, 0.0])
+    with patch.object(sv, "_embed", return_value=stored_v2):
+        sv.enroll(b"\x00" * 1024)   # re-enroll with v2
+        result = sv.similarity(b"\x00" * 64)
+    # dot(v2, v2) / (|v2| * |v2|) = 1.0
+    assert abs(result - 1.0) < 1e-6, f"Expected 1.0 after re-enroll, got {result}"
