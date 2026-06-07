@@ -9,20 +9,24 @@ VIKO is a personal AI voice assistant built with PyQt6 and Google Gemini Live AP
 ## Features
 
 - **Real-time voice conversation** — powered by Gemini Live API (native audio streaming)
-- **Embedded browser** — built-in Chromium browser panel with AI control
+- **Futuristic HUD** — sci-fi dark UI with live system metrics, clock, and animated vector map
+- **Live location & map** — GPS via macOS CoreLocation with Nominatim reverse geocoding; falls back to IP geolocation
+- **Embedded browser** — built-in Chromium browser panel with full AI control via CDP
 - **20+ skills** — web search, file management, app control, code generation, weather, flight lookup, reminders, and more
 - **Self-modification** — VIKO can add new skills, fix bugs, update its own prompt, or modify its UI via voice command
-- **Memory** — long-term vector memory and conversation history (SQLite + ChromaDB)
-- **Workspace** — file storage for AI-generated content (documents, code, presentations, wireframes)
-- **Claude + Gemini routing** — uses Claude (Sonnet) for code generation if `ANTHROPIC_API_KEY` is set, falls back to Gemini
+- **Long-term memory** — vector memory and conversation history (SQLite + ChromaDB + Gemini embeddings)
+- **Dev agent** — builds complete projects from a voice description (plan → code → test → commit)
+- **Claude + Gemini routing** — uses Claude Sonnet for code generation if `ANTHROPIC_API_KEY` is set, falls back to Gemini
+- **Personality** — absurd humor mode with context-aware tone (serious for technical/emotional topics)
 
 ---
 
 ## Requirements
 
 - Python 3.11+
-- macOS (primary target; Windows partially supported)
-- Google Gemini API key
+- macOS (primary; Windows partially supported)
+- [uv](https://docs.astral.sh/uv/) for dependency management
+- Google Gemini API key (required)
 - Anthropic API key (optional — enables Claude for code generation)
 
 ---
@@ -30,7 +34,7 @@ VIKO is a personal AI voice assistant built with PyQt6 and Google Gemini Live AP
 ## Setup
 
 ```bash
-# 1. Clone the repo
+# 1. Clone
 git clone <repo-url>
 cd viko-assistant
 
@@ -38,19 +42,22 @@ cd viko-assistant
 python setup.py
 
 # 3. Configure environment
-cp .env.example .env   # then fill in your API keys
+cp .env.example .env   # fill in your API keys
 ```
 
 ### Environment Variables
 
-Create a `.env` file in the project root:
-
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here   # optional, enables Claude
-OPENROUTER_API_KEY=your_openrouter_key_here     # optional
-OS_SYSTEM=mac                                    # mac | windows
-CAMERA_INDEX=0                                   # webcam index
+GEMINI_API_KEY=your_gemini_api_key        # required
+ANTHROPIC_API_KEY=your_anthropic_key      # optional — Claude for code gen
+OPENROUTER_API_KEY=your_openrouter_key    # optional — alternative LLM routing
+OS_SYSTEM=mac                             # mac | windows
+CAMERA_INDEX=0                            # webcam index
+
+# Optional: fixed coordinates override for map marker
+# Use when CoreLocation permission is not granted
+LATITUDE=-6.2088
+LONGITUDE=106.8456
 ```
 
 ---
@@ -58,8 +65,23 @@ CAMERA_INDEX=0                                   # webcam index
 ## Running
 
 ```bash
-python viko.py
+# Dev mode — Python venv, logs to /tmp/viko.log
+./scripts/start.sh
+
+# Release mode — opens the built .app bundle
+./scripts/start.sh --app
+
+# Monitor logs
+tail -f /tmp/viko.log
 ```
+
+### Building the .app bundle
+
+```bash
+./scripts/build.sh
+```
+
+Runs lint → PyInstaller → patches QtWebEngine paths → outputs `dist/VIKO.app`.
 
 ---
 
@@ -67,20 +89,26 @@ python viko.py
 
 ```
 viko.py                      — Main agent: Gemini Live session, tool routing
+assets/
+  icon.png                   — App icon (1024×1024 PNG)
+  icon.icns                  — Multi-resolution macOS icon bundle
+scripts/
+  start.sh                   — Dev / release launcher
+  build.sh                   — PyInstaller build + QtWebEngine path fix
 viko/
   prompt.txt                 — System prompt (VIKO's personality + tool rules)
   core/
-    config.py                — API key loading from .env
+    config.py                — .env loading; works in source and frozen app
     logger.py                — Structured logging (RotatingFileHandler)
     client.py                — LLM client (OpenRouter / Gemini wrapper)
     memory.py                — Long-term memory extraction
     conversation.py          — Session management, SQLite history
     context_builder.py       — Builds system context for Gemini
-    vector_store.py          — ChromaDB semantic search
+    vector_store.py          — ChromaDB semantic search (Gemini embeddings)
     workspace.py             — File storage for generated content
   ui/
-    window.py                — PyQt6 main window
-    widgets.py               — HUD canvas, activity panel, chat bubbles
+    window.py                — PyQt6 main window; CoreLocation GPS integration
+    widgets.py               — HUD canvas, activity panel, vector map
     theme.py                 — Colors, fonts, stylesheet constants
     browser_panel.py         — Embedded Chromium browser widget
     agent_browser.py         — CDP browser server for AI control
@@ -97,59 +125,68 @@ viko/
   agent/
     planner.py               — Breaks goals into tool-call steps via LLM
     executor.py              — Runs steps, handles retries and replanning
-    recovery.py              — Error analysis and fix generation via LLM
+    recovery.py              — Error analysis and fix generation
     queue.py                 — Priority task queue with cancellation
   self_engineer/
     engine.py                — Self-modification state machine (mutex-protected)
     analyzer.py              — Reads codebase to build LLM context
     planner.py               — Generates structured change plan via LLM
     generator.py             — Generates code patches and new files
-    backup.py                — File versioning + manifest before every change
-    tester.py                — AST syntax + subprocess import + core load checks
-    restarter.py             — Graceful restart via os.execv + flag file
+    backup.py                — File versioning before every change
+    tester.py                — Syntax + import + core load checks
+    restarter.py             — Graceful restart via os.execv
     llm.py                   — LLM router: Claude if key set, else Gemini
-    backups/                 — Timestamped backup files (gitignored)
 ```
 
-### Self-Modification Voice Flow
+---
+
+## Self-Modification Flow
 
 ```
-User: "Viko, tambahkan skill untuk cek harga Bitcoin"
+User: "Viko, add a skill to check Bitcoin price"
   → Gemini calls self_update(intent="...", action="create_skill")
-  → ANALYZE → PLAN → "Saya akan buat crypto_price.py. Lanjutkan?"
+  → ANALYZE → PLAN → "I'll create crypto_price.py. Proceed?"
 
-User: "ya, lanjutkan"
+User: "yes"
   → self_update(action="confirm")
-  → BACKUP → GENERATE → APPLY → TEST → "Test berhasil. Restart sekarang?"
+  → BACKUP → GENERATE → APPLY → TEST → "Tests passed. Restart now?"
 
-User: "ya restart"
+User: "restart"
   → self_update(action="confirm")
-  → os.execv restart → "Saya sudah diperbarui dan siap."
+  → os.execv restart → "Updated and ready."
 ```
+
+Two confirmation gates (plan + restart) prevent accidental changes.  
+Automatic rollback on test failure.
 
 ---
 
 ## Development
 
 ```bash
-# Run tests
+# Run all tests
 python -m pytest tests/ -v
 
-# Run self-engineer tests only
+# Self-engineer tests only
 python -m pytest tests/self_engineer/ -v
 
-# Syntax check
-python -m py_compile viko.py
+# Lint
+.venv/bin/ruff check viko/ viko.py --select F401,F811,F841
 ```
 
 ### Adding a New Skill
 
-1. Create `viko/skills/your_skill.py` with a function: `def your_skill(parameters: dict, player=None, speak=None) -> str`
-2. Add import in `viko.py`
+1. Create `viko/skills/your_skill.py`:
+   ```python
+   def your_skill(parameters: dict, player=None, speak=None) -> str:
+       ...
+       return "result"
+   ```
+2. Import in `viko.py`
 3. Add entry to `TOOL_DECLARATIONS` in `viko.py`
 4. Add handler in `_execute_tool()` in `viko.py`
 
-Or just say: *"Viko, tambahkan skill untuk [deskripsi]"* and let VIKO do it.
+Or say: *"Viko, add a skill to [description]"* and let VIKO build it.
 
 ---
 
