@@ -649,6 +649,8 @@ class MainWindow(QMainWindow):
         We check the current status and guide the user accordingly.
         """
         try:
+            from viko.core.logger import get_logger as _gl
+            _log = _gl(__name__)
             import objc
 
             cl = {}
@@ -714,7 +716,7 @@ class MainWindow(QMainWindow):
                 )
 
                 def locationManager_didFailWithError_(self_d, mgr, err):
-                    print(f"[Location] CoreLocation error: {err}")
+                    _log.warning("CoreLocation error: %s", err)
 
                 locationManager_didFailWithError_ = objc.selector(
                     locationManager_didFailWithError_,
@@ -725,6 +727,8 @@ class MainWindow(QMainWindow):
             self._cl_delegate = _VikoCLDelegate.new()
             self._cl_manager  = CLLocationManager.new()
             self._cl_manager.setDelegate_(self._cl_delegate)
+            self._cl_manager.setDistanceFilter_(50.0)
+            self._cl_manager.setDesiredAccuracy_(100.0)  # kCLLocationAccuracyHundredMeters
 
             status = CLLocationManager.authorizationStatus()
             if status in (AUTH_AUTHORIZED, AUTH_WHEN_IN_USE):
@@ -743,10 +747,12 @@ class MainWindow(QMainWindow):
                     "Location Services → aktifkan untuk Terminal."
                 )
 
-            print(f"[Location] CoreLocation auth status: {status}")
+            labels = {0: "not_determined", 1: "restricted", 2: "denied",
+                      3: "authorized_always", 4: "authorized_when_in_use"}
+            _log.info("CoreLocation auth status: %s (%s)", status, labels.get(status, "unknown"))
 
         except Exception as e:
-            print(f"[Location] CoreLocation unavailable: {e}")
+            _log.warning("CoreLocation unavailable: %s", e)
 
     def _push_latency(self):
         ms = self._metrics.snapshot().get("latency", 0)
