@@ -23,6 +23,9 @@ from viko.core.conversation import (
 )
 from viko.core.context_builder import build_system_context
 from viko.core.vector_store import index_message as vs_index_message
+from viko.core.logger import get_logger
+
+_log = get_logger("main")
 
 from viko.skills.file_processor    import file_processor
 from viko.skills.flight_finder     import flight_finder
@@ -1349,6 +1352,8 @@ class VikoLive:
 
 
 def main():
+    _log.info("=" * 60)
+    _log.info("VIKO startup")
     ui = VikoUI("face.png")
     ui.set_boot_progress(0.0, "INITIALIZING...")
 
@@ -1358,10 +1363,12 @@ def main():
         try:
             asyncio.run(viko.run())
         except KeyboardInterrupt:
+            _log.info("VIKO shutdown (keyboard interrupt)")
             print("\nShutting down...")
 
     threading.Thread(target=runner, daemon=True).start()
     ui.root.mainloop()
+    _log.info("VIKO shutdown")
 
 
 if __name__ == "__main__":
