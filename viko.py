@@ -1386,6 +1386,8 @@ class VikoLive:
             http_options={"api_version": "v1beta"}
         )
 
+        self.ui.write_log("SYS: App dimulai ulang.")
+
         # Boot phase 1: loading memory + context
         self.ui.set_boot_progress(0.1, "LOADING MEMORY...")
         await asyncio.sleep(0.05)
