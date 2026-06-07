@@ -1050,7 +1050,7 @@ class BootScreen(QWidget):
         p.drawRoundedRect(QRectF(bx, by, bar_w * self._pct, bar_h), 1, 1)
 
         # Status label below bar
-        p.setFont(F(9)); p.setPen(pri(160))
+        p.setFont(F(11)); p.setPen(pri(160))
         fm2 = QFontMetrics(p.font())
         sl_w = fm2.horizontalAdvance(self._label)
         p.drawText(cx - sl_w // 2, by + bar_h + 18, self._label)
