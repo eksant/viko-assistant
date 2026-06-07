@@ -66,6 +66,9 @@ CHANNELS            = 1
 SEND_SAMPLE_RATE    = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE          = 1024
+SPEECH_THRESHOLD    = 300   # int16 RMS — active speech
+SILENCE_CHUNKS      = 20    # ~1.3s silence ends an utterance
+MIN_SPEECH_CHUNKS   = 8     # ~512ms minimum speech to process
 
 
 def _get_api_key() -> str:
@@ -645,12 +648,12 @@ class VikoLive:
     def _on_text_command(self, text: str):
         if self.ui.paused:
             return
-        self.ui.write_log(f"YOU: {text}")
 
-        # Passphrase bypass — check before forwarding to Gemini
+        # Passphrase bypass — must check before logging to avoid exposing it on screen
         from viko.core.config import get_owner_passphrase
         passphrase = get_owner_passphrase()
         if passphrase and text.strip() == passphrase:
+            self.ui.write_log("YOU: [passphrase]")
             def _reset_bypass():
                 self._verification_bypass = False
                 self.ui.write_log("SYS: Bypass verifikasi suara nonaktif.")
@@ -659,6 +662,8 @@ class VikoLive:
                 self._loop.call_later(300, _reset_bypass)
             self.ui.write_log("SYS: Bypass aktif 5 menit.")
             return  # never sent to Gemini
+
+        self.ui.write_log(f"YOU: {text}")
 
         # Re-enrollment phrase — requires bypass active
         if text.strip().lower() == "viko, kenali suaraku" and self._verification_bypass:
@@ -791,10 +796,6 @@ class VikoLive:
         stt = self._offline_stt or OfflineSTT()
         loop = asyncio.get_running_loop()
         audio_q: asyncio.Queue = asyncio.Queue()
-
-        SPEECH_THRESHOLD  = 300
-        SILENCE_CHUNKS    = 20
-        MIN_SPEECH_CHUNKS = 8
 
         def _cb(indata, frames, time_info, status):
             if self.ui.muted or self.ui.paused:
@@ -1181,10 +1182,6 @@ class VikoLive:
 
         Also handles in-session re-enrollment when self._enrolling is True.
         """
-        SPEECH_THRESHOLD  = 300
-        SILENCE_CHUNKS    = 20
-        MIN_SPEECH_CHUNKS = 8
-
         loop = asyncio.get_running_loop()
         buf:           list[dict] = []
         silence_count: int  = 0
@@ -1419,7 +1416,7 @@ class VikoLive:
                     self.session        = session
                     self._loop          = asyncio.get_event_loop()
                     self.audio_in_queue = asyncio.Queue(maxsize=200)  # ~200 chunks × 42ms = ~8s headroom
-                    self.out_queue      = asyncio.Queue(maxsize=200)
+                    self.out_queue      = asyncio.Queue(maxsize=200)  # sized to hold full utterance burst from _verify_and_forward
                     self.raw_queue      = asyncio.Queue(maxsize=200)
                     self._last_active   = asyncio.get_event_loop().time()
                     self._enrolling     = False
