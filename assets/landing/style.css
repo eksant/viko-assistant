@@ -251,3 +251,54 @@ footer { padding: 40px 64px; display: flex; justify-content: space-between; alig
 .footer-email { font-size: 12px; color: var(--dim); text-decoration: none; }
 .footer-email:hover { color: var(--pri); }
 .footer-copy { font-size: 11px; color: var(--dim); }
+
+/* ════ RESPONSIVE ════ */
+
+/* Tablet (≤900px) */
+@media (max-width: 900px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .screenshots-grid { grid-template-columns: repeat(2, 1fr); }
+  .story { grid-template-columns: 1fr; gap: 48px; padding: 64px 40px; }
+  .hero-content { width: 70%; padding: 0 40px; }
+  .hero-hud { width: 600px; height: 600px; }
+  .hero-title { font-size: 64px; }
+  .features { padding: 64px 40px; }
+  .screenshots { padding: 64px 40px; }
+  .github-cta { padding: 64px 40px; }
+  footer { padding: 32px 40px; }
+}
+
+/* Mobile (≤600px) */
+@media (max-width: 600px) {
+  header { padding: 0 20px; }
+  .nav-links .nav-link { display: none; }
+  .nav-cta { font-size: 10px; padding: 7px 14px; }
+
+  .hero { height: auto; min-height: 500px; padding: 80px 0 48px; }
+  .hero-hud { right: 50%; transform: translate(50%, -50%); width: 420px; height: 420px; opacity: 0.2; }
+  .hero-fade-left { width: 100%; background: rgba(0,0,0,0.7); }
+  .hero-content { width: 100%; padding: 0 24px; }
+  .hero-title { font-size: 52px; letter-spacing: 6px; }
+  .hero-tagline { font-size: 18px; }
+  .hero-desc { font-size: 14px; }
+  .hero-cta { flex-direction: column; gap: 10px; }
+  .btn-primary, .btn-outline { width: 100%; text-align: center; }
+
+  .story { padding: 56px 24px; gap: 36px; }
+  .story-title { font-size: 26px; }
+  .story-body { font-size: 15px; }
+
+  .features { padding: 56px 24px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .section-title { font-size: 24px; }
+
+  .screenshots { padding: 56px 24px; }
+  .screenshots-grid { grid-template-columns: 1fr; }
+
+  .github-cta { padding: 56px 24px; }
+  .github-cta-title { font-size: 26px; }
+  .github-cta-sub { font-size: 14px; }
+
+  footer { padding: 28px 24px; flex-direction: column; align-items: flex-start; gap: 16px; }
+  .footer-center { align-items: flex-start; }
+}
