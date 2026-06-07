@@ -6,7 +6,7 @@ Collections:
   - viko_facts:    indexed facts / notes
 
 Embedding strategy:
-  1. PRIMARY:  Gemini text-embedding-004 (requires GEMINI_API_KEY, online)
+  1. PRIMARY:  Gemini gemini-embedding-001 (requires GEMINI_API_KEY, online)
   2. FALLBACK: ChromaDB DefaultEmbeddingFunction (offline ONNX)
 """
 
@@ -38,21 +38,21 @@ def _make_ef() -> Any:
 
         class GeminiEF:
             def name(self) -> str:
-                return "gemini-text-embedding-004"
+                return "gemini-embedding-001"
 
             def __call__(self, input: list[str]) -> list[list[float]]:  # noqa: A002
                 _client = genai.Client(api_key=key)
                 result = []
                 for text in input:
                     resp = _client.models.embed_content(
-                        model="text-embedding-004",
+                        model="gemini-embedding-001",
                         contents=text,
                     )
                     result.append(resp.embeddings[0].values)
                 return result
 
         ef = GeminiEF()
-        logger.debug("vector_store: using Gemini text-embedding-004")
+        logger.debug("vector_store: using Gemini gemini-embedding-001")
         return ef
     except Exception as exc:  # noqa: BLE001
         logger.debug("vector_store: Gemini EF unavailable (%s), using default", exc)
