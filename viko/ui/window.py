@@ -692,6 +692,12 @@ class MainWindow(QMainWindow):
                     except AttributeError:
                         lat, lon = float(coord[0]), float(coord[1])
                     parent._loc_sig.emit(lat, lon, _fmt_label(lat, lon))
+                    import threading as _t
+                    _t.Thread(
+                        target=parent._fetch_country_from_gps,
+                        args=(lat, lon),
+                        daemon=True,
+                    ).start()
 
                 locationManager_didUpdateLocations_ = objc.selector(
                     locationManager_didUpdateLocations_,
@@ -753,6 +759,21 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             _log.warning("CoreLocation unavailable: %s", e)
+
+    def _fetch_country_from_gps(self, lat: float, lon: float):
+        try:
+            import urllib.request, json as _json
+            url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json"
+            req = urllib.request.Request(url, headers={"User-Agent": "VIKO/1.0"})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                d = _json.loads(r.read())
+            cc2 = d.get("address", {}).get("country_code", "").upper()
+            if cc2:
+                polys = self._fetch_country_polys(cc2)
+                if polys:
+                    self._country_sig.emit(polys)
+        except Exception:
+            pass
 
     def _push_latency(self):
         ms = self._metrics.snapshot().get("latency", 0)
