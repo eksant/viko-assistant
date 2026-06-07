@@ -632,12 +632,22 @@ class MainWindow(QMainWindow):
         lat_timer.timeout.connect(self._push_latency)
         lat_timer.start(5000)
 
-        # IP fallback: runs in background, also fetches country polygon
-        threading.Thread(target=self._fetch_location, daemon=True).start()
-
-        # Native location: CoreLocation on main thread (accurate GPS/WiFi)
-        # Slight delay so Qt event loop is fully settled
-        QTimer.singleShot(800, self._start_corelocation)
+        # Manual coordinates from .env take priority — skip IP and CoreLocation
+        from viko.core.config import get_location as _get_loc
+        manual = _get_loc()
+        if manual:
+            lat, lon = manual
+            la_d, la_m = int(abs(lat)), int((abs(lat) % 1) * 60)
+            lo_d, lo_m = int(abs(lon)), int((abs(lon) % 1) * 60)
+            la_s = f"{la_d:02d}°{la_m:02d}′{'N' if lat >= 0 else 'S'}"
+            lo_s = f"{lo_d:03d}°{lo_m:02d}′{'E' if lon >= 0 else 'W'}"
+            self._loc_sig.emit(lat, lon, f"CFG  {la_s}  {lo_s}")
+            threading.Thread(target=self._fetch_country_from_gps, args=(lat, lon), daemon=True).start()
+        else:
+            # IP fallback: runs in background, also fetches country polygon
+            threading.Thread(target=self._fetch_location, daemon=True).start()
+            # CoreLocation on main thread (accurate GPS/WiFi) — needs macOS permission
+            QTimer.singleShot(800, self._start_corelocation)
 
     def _start_corelocation(self):
         """

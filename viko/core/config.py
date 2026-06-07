@@ -45,6 +45,16 @@ def save_keys(gemini_api_key: str = "", openrouter_api_key: str = "", os_system:
     _write_env_dict(data)
 
 
+def get_location() -> tuple[float, float] | None:
+    """Return (lat, lon) from .env if LATITUDE and LONGITUDE are set, else None."""
+    try:
+        lat = float(os.environ.get("LATITUDE", "").strip())
+        lon = float(os.environ.get("LONGITUDE", "").strip())
+        return (lat, lon)
+    except (ValueError, AttributeError):
+        return None
+
+
 def is_configured() -> bool:
     key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not key:
