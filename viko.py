@@ -646,6 +646,28 @@ class VikoLive:
         if self.ui.paused:
             return
         self.ui.write_log(f"YOU: {text}")
+
+        # Passphrase bypass — check before forwarding to Gemini
+        from viko.core.config import get_owner_passphrase
+        passphrase = get_owner_passphrase()
+        if passphrase and text.strip() == passphrase:
+            def _reset_bypass():
+                self._verification_bypass = False
+                self.ui.write_log("SYS: Bypass verifikasi suara nonaktif.")
+            self._verification_bypass = True
+            if self._loop:
+                self._loop.call_later(300, _reset_bypass)
+            self.ui.write_log("SYS: Bypass aktif 5 menit.")
+            return  # never sent to Gemini
+
+        # Re-enrollment phrase — requires bypass active
+        if text.strip().lower() == "viko, kenali suaraku" and self._verification_bypass:
+            if self._loop:
+                asyncio.run_coroutine_threadsafe(
+                    self._start_re_enrollment(), self._loop
+                )
+            return  # never sent to Gemini
+
         if not self._loop or not self.session:
             self.ui.write_log("SYS: Session not ready — try again in a moment.")
             return
@@ -718,6 +740,13 @@ class VikoLive:
 
         pcm = b"".join(chunks)
         await loop.run_in_executor(None, self._sv.enroll, pcm)
+
+    async def _start_re_enrollment(self) -> None:
+        """Signal _verify_and_forward() to collect 10s of audio for re-enrollment."""
+        self.ui.write_log("SYS: Silakan berbicara bebas selama 10 detik untuk mendaftarkan suara baru...")
+        self._enroll_buf    = []
+        self._enroll_target = int(10 * SEND_SAMPLE_RATE / CHUNK_SIZE)
+        self._enrolling     = True
 
     async def _offline_respond(self, text: str) -> None:
         """Get LLM reply for text and speak via macOS say. Used in offline mode."""
