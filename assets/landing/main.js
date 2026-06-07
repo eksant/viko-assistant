@@ -95,10 +95,11 @@
   }
 
   drawHUD(amberAngle, counterAngle, pulseT);
-  setInterval(() => {
+  const hudInterval = setInterval(() => {
     amberAngle   = (amberAngle + 0.35) % 360;
     counterAngle = (counterAngle - 0.22 + 360) % 360;
     pulseT       = (pulseT + 0.0035) % 1;
     drawHUD(amberAngle, counterAngle, pulseT);
   }, 40);
+  window.addEventListener('beforeunload', () => clearInterval(hudInterval));
 }());
