@@ -24,6 +24,7 @@ from viko.core.conversation import (
 from viko.core.context_builder import build_system_context
 from viko.core.vector_store import index_message as vs_index_message
 from viko.core.logger import get_logger
+from viko.core.speaker_verifier import SpeakerVerifier
 
 _log = get_logger("main")
 
@@ -632,6 +633,12 @@ class VikoLive:
         self._last_active   = 0.0
         self._session_id    = 0
         self._offline_stt   = None  # pre-warmed OfflineSTT instance
+        self._sv                  = SpeakerVerifier()
+        self._verification_bypass = False
+        self._enrolling           = False
+        self._enroll_buf: list    = []
+        self._enroll_target: int  = 0
+        self.raw_queue            = None
         self.ui.on_text_command = self._on_text_command
         self.ui.on_file_command = self._on_file_command
 
@@ -686,6 +693,31 @@ class VikoLive:
             self.ui.write_log("SYS: Model offline siap.")
         except Exception as _e:
             print(f"[Viko] Offline STT warmup failed: {_e}")
+
+    async def _enroll_voice(self) -> None:
+        """Record 10 seconds of mic audio and save owner voice profile."""
+        loop = asyncio.get_running_loop()
+        audio_q: asyncio.Queue = asyncio.Queue()
+
+        def _cb(indata, frames, time_info, status):
+            loop.call_soon_threadsafe(audio_q.put_nowait, indata.tobytes())
+
+        target = int(10 * SEND_SAMPLE_RATE / CHUNK_SIZE)  # ~156 chunks = 10s
+        chunks = []
+
+        with sd.InputStream(
+            samplerate=SEND_SAMPLE_RATE,
+            channels=CHANNELS,
+            dtype="int16",
+            blocksize=CHUNK_SIZE,
+            callback=_cb,
+        ):
+            for i in range(target):
+                chunk = await audio_q.get()
+                chunks.append(chunk)
+
+        pcm = b"".join(chunks)
+        await loop.run_in_executor(None, self._sv.enroll, pcm)
 
     async def _offline_respond(self, text: str) -> None:
         """Get LLM reply for text and speak via macOS say. Used in offline mode."""
@@ -1265,6 +1297,13 @@ class VikoLive:
         await asyncio.sleep(0.05)
         self.ui.set_boot_progress(0.35, "BUILDING CONTEXT...")
         await asyncio.sleep(0.05)
+
+        # Enrollment: first launch (no voice profile yet)
+        if not self._sv.is_enrolled():
+            self.ui.set_boot_progress(0.45, "MENDAFTARKAN SUARA...")
+            self.ui.write_log("SYS: Silakan berbicara bebas selama 10 detik...")
+            await self._enroll_voice()
+            self.ui.write_log("SYS: Suara berhasil didaftarkan.")
 
         _first_connect = True
 
