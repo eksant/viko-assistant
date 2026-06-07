@@ -16,7 +16,6 @@ Supported types:
   pptx    → summarize, extract_text, to_pdf
 """
 
-import os
 import re
 import json
 import shutil

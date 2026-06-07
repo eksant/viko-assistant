@@ -148,7 +148,7 @@ class SelfEngineerEngine:
 
         _save_pending_plan(plan, context)
         summary = plan.get("summary_for_voice", "Saya akan melakukan perubahan pada kode.")
-        logger.info("Plan ready: %s", summary)
+        logger.info("Plan ready: action=%s", action)
         return f"{summary} Lanjutkan?"
 
     def _execute_plan(self, plan: dict, context: dict, speak=None) -> str:
@@ -182,11 +182,11 @@ class SelfEngineerEngine:
         if not result.passed:
             logger.error("Tests failed, rolling back: %s", result.message)
             backup.restore(backup_id)
-            return f"Test gagal: {result.message}. Perubahan dikembalikan ke backup."
+            return "Test gagal. Perubahan dikembalikan ke backup."
 
         logger.info("Tests passed: %s", result.message)
         _save_pending_restart(changes, backup_id)
-        return f"Test berhasil: {result.message}. Restart VIKO sekarang?"
+        return "Test berhasil. Restart VIKO sekarang?"
 
 
 # Module-level convenience

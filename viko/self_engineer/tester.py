@@ -98,4 +98,4 @@ def run(plan: dict, changes: list[dict]) -> TestResult:
             return r
 
     n = sum(1 for r in all_results if r.passed)
-    return TestResult(True, f"Semua test lolos ({n} check{'s' if n != 1 else ''})")
+    return TestResult(True, f"All tests passed ({n} check{'s' if n != 1 else ''})")

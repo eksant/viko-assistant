@@ -105,8 +105,8 @@ def build_context(intent: str, target_files: list[str] | None = None, action: st
         _add("viko/prompt.txt")
 
     elif category == "modify_ui":
-        _add("viko/ui_theme.py")
-        _add("viko/ui.py")
+        _add("viko/ui/theme.py")
+        _add("viko/ui/window.py")
 
     else:
         for rel in VIKO_MANIFEST:
