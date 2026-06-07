@@ -1,40 +1,41 @@
 # VIKO SelfEngineer Pipeline — Design Spec
-**Date:** 2026-06-07  
+
+**Date:** 2026-06-07
 **Status:** Approved
 
 ---
 
 ## Overview
 
-VIKO dapat memodifikasi kodenya sendiri ketika diperintahkan lewat suara. Ini mencakup: menambah skill baru, memperbaiki bug, mengubah perilaku/prompt, memodifikasi UI, dan me-restore perubahan. Pendekatan menggunakan pipeline state machine (SelfEngineer) dengan konfirmasi user di dua titik kritis: sebelum eksekusi dan sebelum restart.
+VIKO can modify its own code when instructed by voice. This includes: adding new skills, fixing bugs, changing behavior/prompt, modifying the UI, and restoring previous changes. The approach uses a state machine pipeline (SelfEngineer) with user confirmation at two critical points: before execution and before restart.
 
 ---
 
-## Scope Modifikasi
+## Modification Scope
 
-- **Semua file VIKO** boleh dimodifikasi (skills, prompt, config, memory, UI, core)
-- **Safety**: backup wajib sebelum satu byte pun diubah
-- **Versioning**: file-based dulu (backup + manifest), git-based setelah sistem terbukti stabil
+- **All VIKO files** may be modified (skills, prompt, config, memory, UI, core)
+- **Safety**: backup is mandatory before any byte is changed
+- **Versioning**: file-based initially (backup + manifest); git-based after the system proves stable
 
 ---
 
-## Arsitektur Modul
+## Module Architecture
 
 ```
 viko/
   self_engineer/
     __init__.py
-    engine.py       ← orchestrator utama (state machine)
-    analyzer.py     ← baca & pahami codebase VIKO
-    planner.py      ← Gemini generate structured plan
-    generator.py    ← generate code changes/patches
+    engine.py       ← main orchestrator (state machine)
+    analyzer.py     ← reads and understands the VIKO codebase
+    planner.py      ← LLM generates a structured plan
+    generator.py    ← generates code changes/patches
     backup.py       ← file versioning & restore
     tester.py       ← syntax + import + smoke test
-    restarter.py    ← graceful restart VIKO
-    backups/        ← folder backup (auto-created, gitignored)
+    restarter.py    ← graceful VIKO restart
+    backups/        ← backup folder (auto-created, gitignored)
 
 viko/skills/
-  self_update.py    ← voice-facing skill, wrap engine.py
+  self_update.py    ← voice-facing skill, wraps engine.py
 ```
 
 ---
@@ -47,60 +48,61 @@ ANALYZE → PLAN → [user confirm] → GENERATE → BACKUP → APPLY → TEST �
 ```
 
 **States:**
-| State | Deskripsi |
+
+| State | Description |
 |---|---|
-| ANALYZE | Scan file relevan berdasarkan intent |
-| PLAN | Gemini buat structured plan + announce ke user |
-| USER_CONFIRM_PLAN | Tunggu konfirmasi user ("lanjutkan?") |
-| GENERATE | Gemini generate actual code changes |
-| BACKUP | Simpan originals + catat ke manifest |
-| APPLY | Tulis perubahan ke disk |
-| TEST | Syntax + import + smoke test di subprocess |
-| USER_CONFIRM_RESTART | Announce hasil test + tanya restart |
-| RESTART | Graceful restart VIKO |
-| ROLLBACK | Restore dari backup (jika test FAIL atau user cancel) |
+| ANALYZE | Scan relevant files based on intent |
+| PLAN | LLM generates a structured plan + announces to user |
+| USER_CONFIRM_PLAN | Wait for user confirmation ("continue?") |
+| GENERATE | LLM generates actual code changes |
+| BACKUP | Save originals + record in manifest |
+| APPLY | Write changes to disk |
+| TEST | Syntax + import + smoke test in a subprocess |
+| USER_CONFIRM_RESTART | Announce test result + ask to restart |
+| RESTART | Graceful VIKO restart |
+| ROLLBACK | Restore from backup (on test FAIL or user cancel) |
 
 ---
 
-## Komponen Detail
+## Component Details
 
 ### analyzer.py
 
-Tujuan: bangun context paket yang cukup untuk Planner tanpa banjir token.
+Goal: build a context package sufficient for the planner without overflowing the token budget.
 
 ```
 Input: intent string + optional target_files
 Output: {files: {path: content}, structure_summary, intent_category}
 
 Logic:
-  - Baca manifest VIKO (semua file + ukuran + deskripsi singkat)
-  - Identifikasi file relevan berdasarkan intent:
-      "skill baru"  → baca 1-2 skill existing sebagai template
-      "fix bug"     → baca file yang disebutkan + recent error context
-      "ubah prompt" → baca prompt.txt saja
-      "ubah UI"     → baca ui.py + ui_widgets.py header
-  - Token budget: maksimal ~20K tokens untuk context paket
+  - Read VIKO manifest (all files + sizes + brief descriptions)
+  - Identify relevant files based on intent:
+      "new skill"    → read 1-2 existing skills as templates
+      "fix bug"      → read mentioned file + recent error context
+      "change prompt" → read prompt.txt only
+      "change UI"    → read ui.py + ui_widgets.py header
+  - Token budget: max ~20K tokens for context package
 ```
 
 ### planner.py
 
-Tujuan: hasilkan structured plan yang bisa diumumkan ke user dan dieksekusi oleh generator.
+Goal: produce a structured plan that can be announced to the user and executed by the generator.
 
 ```json
 {
-  "intent": "Tambah skill crypto price",
-  "summary_for_voice": "Saya akan membuat file baru crypto_price.py dan mendaftarkannya di viko.py.",
+  "intent": "Add crypto price skill",
+  "summary_for_voice": "I will create a new file crypto_price.py and register it in viko.py.",
   "changes": [
     {
       "action": "create",
       "file": "viko/skills/crypto_price.py",
-      "description": "Skill baru: ambil harga crypto dari CoinGecko API"
+      "description": "New skill: fetch crypto price from CoinGecko API"
     },
     {
       "action": "modify",
       "file": "viko.py",
       "targets": ["import section", "TOOL_DECLARATIONS"],
-      "description": "Daftarkan skill crypto_price"
+      "description": "Register the crypto_price skill"
     }
   ],
   "test_strategy": ["syntax", "import", "mock_call"]
@@ -109,29 +111,29 @@ Tujuan: hasilkan structured plan yang bisa diumumkan ke user dan dieksekusi oleh
 
 ### generator.py
 
-Tujuan: hasilkan content aktual untuk setiap change dalam plan.
+Goal: produce the actual content for each change in the plan.
 
 ```
-Untuk "create" → generate full file content
-Untuk "modify" → generate targeted patches:
+For "create" → generate full file content
+For "modify" → generate targeted patches:
     {
       "file": "viko.py",
       "patches": [
-        {"before": "from viko.skills.web_search import...", 
+        {"before": "from viko.skills.web_search import...",
          "after": "from viko.skills.web_search import...\nfrom viko.skills.crypto_price import crypto_price"}
       ]
     }
-Untuk "prompt" → generate updated prompt.txt content penuh
+For "prompt" → generate updated full prompt.txt content
 ```
 
-Patch strategy: string-based replace (bukan AST manipulation) — lebih predictable untuk Gemini.
+Patch strategy: string-based replace (not AST manipulation) — more predictable for LLM output.
 
 ### backup.py
 
-Tujuan: zero data loss sebelum setiap perubahan.
+Goal: zero data loss before every change.
 
 ```
-Struktur backup:
+Backup structure:
 backups/
   2026-06-07_143022_viko.py
   2026-06-07_143022_viko__skills__crypto_price.py  (path separator → __)
@@ -141,7 +143,7 @@ manifest.json entry:
 {
   "id": "bk_001",
   "timestamp": "2026-06-07 14:30:22",
-  "intent": "tambah skill crypto price",
+  "intent": "add crypto price skill",
   "files_changed": ["viko.py"],
   "files_created": ["viko/skills/crypto_price.py"],
   "restorable": true
@@ -149,81 +151,81 @@ manifest.json entry:
 ```
 
 Voice restore commands:
-- *"Viko, kembalikan perubahan terakhir"* → restore manifest entry terbaru
+- *"Viko, kembalikan perubahan terakhir"* → restore most recent manifest entry
 - *"Viko, lihat history perubahan kamu"* → list manifest entries
 
 ### tester.py
 
-Tujuan: validasi perubahan sebelum konfirmasi restart, dijalankan di subprocess terpisah.
+Goal: validate changes before confirming restart, run in a separate subprocess.
 
 ```
 Test sequence:
-1. AST parse semua file yang diubah → syntax valid?
-2. python -c "import <module>" → import clean?
-3. Jika skill baru → panggil fungsi dengan mock args, cek tidak crash
-4. Jika modifikasi core (viko.py/ui.py) → python -c "from viko.ui import VikoUI"
+1. AST parse all modified files → syntax valid?
+2. python -c "import <module>" → clean import?
+3. If new skill → call function with mock args, check no crash
+4. If core modification (viko.py/ui.py) → python -c "from viko.ui import VikoUI"
 
-Hasil: PASS / FAIL + error message
-On FAIL → rollback otomatis + announce error ke user
-On PASS → announce: "Test berhasil. Restart VIKO sekarang?"
+Result: PASS / FAIL + error message
+On FAIL → automatic rollback + announce error to user
+On PASS → announce: "Test passed. Restart VIKO now?"
 ```
 
 ### restarter.py
 
-Tujuan: restart VIKO secara graceful dari dalam proses sendiri.
+Goal: gracefully restart VIKO from within its own process.
 
 ```python
 def restart():
-    # 1. Simpan flag restart_pending di temp file
-    # 2. QApplication.quit() di main thread
+    # 1. Save restart_pending flag to temp file
+    # 2. QApplication.quit() on main thread
     # 3. os.execv(sys.executable, [sys.executable] + sys.argv)
-    #    → replace proses dengan proses baru (no zombie)
+    #    → replace process with new process (no zombie)
 
-# VIKO baru saat startup:
-# - Cek restart_pending flag
-# - Jika ada → announce via suara: "Saya sudah diperbarui dan siap"
-# - Hapus flag
+# On VIKO startup:
+# - Check restart_pending flag
+# - If found → announce via voice: "I have been updated and am ready"
+# - Delete flag
 ```
 
 ### engine.py
 
-Tujuan: orchestrate seluruh pipeline, maintain state, handle error dan rollback.
+Goal: orchestrate the full pipeline, maintain state, handle errors and rollback.
 
 ```python
 class SelfEngineerEngine:
     def run(self, intent: str, target_files: list[str] = None):
         # 1. ANALYZE
         context = analyzer.build_context(intent, target_files)
-        
+
         # 2. PLAN
         plan = planner.generate(context)
         announce(plan["summary_for_voice"])  # via VIKO voice
-        
+
         # 3. USER CONFIRM
-        if not await_user_confirm("Lanjutkan?"):
-            return "Dibatalkan."
-        
+        if not await_user_confirm("Continue?"):
+            return "Cancelled."
+
         # 4. GENERATE
         changes = generator.generate(plan, context)
-        
-        # 5. BACKUP (sebelum apply)
+
+        # 5. BACKUP (before apply)
         backup_id = backup.save(plan)
-        
+
         # 6. APPLY
         apply_changes(changes)
-        
+
         # 7. TEST
         result = tester.run(plan)
         if result.failed:
             backup.restore(backup_id)
-            return f"Test gagal: {result.error}. Perubahan dibatalkan."
-        
+            return f"Test failed: {result.error}. Changes reverted."
+
         # 8. USER CONFIRM RESTART
-        announce("Test berhasil. Restart VIKO sekarang?")
+        announce("Test passed. Restart VIKO now?")
         if await_user_confirm("Restart?"):
             restarter.restart()
         else:
-            return "Perubahan tersimpan. Restart manual untuk mengaktifkan."
+            return "Changes saved. Restart manually to activate."
 ```
 
 ---
@@ -231,29 +233,29 @@ class SelfEngineerEngine:
 ## Voice Tool Declaration
 
 ```python
-# di viko.py TOOL_DECLARATIONS
+# in viko.py TOOL_DECLARATIONS
 {
     "name": "self_update",
     "description": (
-        "Modifikasi kode VIKO sendiri: tambah skill baru, fix bug, ubah perilaku/prompt, "
-        "modifikasi UI, atau restore backup perubahan sebelumnya."
+        "Modify VIKO's own code: add a new skill, fix a bug, change behavior/prompt, "
+        "modify the UI, or restore a previous backup."
     ),
     "parameters": {
         "type": "object",
         "properties": {
             "intent": {
                 "type": "string",
-                "description": "Deskripsi lengkap perubahan yang diminta user"
+                "description": "Full description of the change requested by the user"
             },
             "target_files": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Opsional: file spesifik yang relevan"
+                "description": "Optional: specific files that are relevant"
             },
             "action": {
                 "type": "string",
                 "enum": ["create_skill", "fix_bug", "modify_prompt", "modify_ui", "restore", "history"],
-                "description": "Kategori aksi"
+                "description": "Action category"
             }
         },
         "required": ["intent", "action"]
@@ -265,42 +267,42 @@ class SelfEngineerEngine:
 
 ## Voice Trigger Examples
 
-| Ucapan User | Action | Files Target |
+| User Says | Action | Target Files |
 |---|---|---|
-| "Tambahkan skill untuk cek harga Bitcoin" | create_skill | viko/skills/ + viko.py |
-| "Perbaiki bug di browser tool, tadi ada error" | fix_bug | viko/skills/browser_tool.py |
-| "Mulai sekarang jawab lebih singkat" | modify_prompt | viko/prompt.txt |
-| "Ubah warna UI jadi lebih gelap" | modify_ui | viko/ui_theme.py |
-| "Kembalikan perubahan terakhir" | restore | dari manifest |
-| "Lihat history perubahan kamu" | history | manifest.json |
+| "Add a skill to check Bitcoin price" | create_skill | viko/skills/ + viko.py |
+| "Fix the bug in the browser tool, there was an error" | fix_bug | viko/skills/browser_tool.py |
+| "From now on give shorter answers" | modify_prompt | viko/prompt.txt |
+| "Change the UI color to something darker" | modify_ui | viko/ui_theme.py |
+| "Revert the last change" | restore | from manifest |
+| "Show me your change history" | history | manifest.json |
 
 ---
 
 ## Error Handling
 
-| Kondisi | Respons |
+| Condition | Response |
 |---|---|
-| Analyzer gagal baca file | Announce error, tanya apakah user mau specify file manual |
-| Planner gagal generate plan | Retry 1x dengan prompt yang lebih sederhana |
-| Test FAIL | Rollback otomatis, announce error detail |
-| Backup gagal (disk full) | Abort seluruh operasi, jangan apply apapun |
-| Restart gagal | Perubahan tetap tersimpan, user restart manual |
+| Analyzer fails to read file | Announce error, ask if user wants to specify file manually |
+| Planner fails to generate plan | Retry once with a simpler prompt |
+| Test FAIL | Automatic rollback, announce detailed error |
+| Backup fails (disk full) | Abort entire operation, do not apply anything |
+| Restart fails | Changes remain saved, user restarts manually |
 
 ---
 
 ## Constraints
 
-- **Token budget analyzer**: maks ~20K tokens context per operasi
-- **Patch size**: generator tidak rewrite seluruh file jika >200 baris; hanya patch bagian yang relevan
-- **Backup retention**: simpan semua backup (tidak ada auto-delete); cleanup manual via perintah suara
-- **Test timeout**: subprocess test max 30 detik sebelum dianggap FAIL
-- **No git ops**: belum ada git commit otomatis; git dipakai manual setelah sistem terbukti stabil
+- **Analyzer token budget**: max ~20K tokens context per operation
+- **Patch size**: generator does not rewrite entire file if >200 lines; patches only the relevant sections
+- **Backup retention**: keep all backups (no auto-delete); manual cleanup via voice command
+- **Test timeout**: subprocess test max 30 seconds before considered FAIL
+- **No automatic git ops**: no automatic git commit; git used manually after system proves stable
 
 ---
 
-## Out of Scope (untuk versi ini)
+## Out of Scope (this version)
 
-- Git-based versioning (diimplementasi setelah sistem stabil)
-- Multi-step rollback (hanya 1 level restore untuk sekarang)
-- Unit test generation (hanya smoke test)
-- Remote deployment atau update dari server
+- Git-based versioning (to be implemented after system is stable)
+- Multi-step rollback (only 1 level of restore for now)
+- Unit test generation (smoke test only)
+- Remote deployment or update from server

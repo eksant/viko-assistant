@@ -5,7 +5,7 @@
 
 ## Problem
 
-VIKO's current personality already permits light humor (sarkasme halus, slang gaul), but the rules are vague and undersell the absurd/random humor style the owner wants. There is no guidance on style, frequency, or hard-off conditions, so humor ends up inconsistent.
+VIKO's current personality already permits light humor (subtle sarcasm, casual slang), but the rules are vague and undersell the absurd/random humor style the owner wants. There is no guidance on style, frequency, or hard-off conditions, so humor ends up inconsistent.
 
 ## Goal
 
@@ -18,6 +18,8 @@ Append a new section called `HUMOR MODE` directly after the existing `KEPRIBADIA
 ## Design
 
 ### New section content
+
+The following prompt text is intentionally written in Indonesian, as VIKO speaks to its owner in Indonesian:
 
 ```
 HUMOR MODE:
