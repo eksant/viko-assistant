@@ -69,6 +69,8 @@ CHUNK_SIZE          = 1024
 SPEECH_THRESHOLD    = 40    # int16 RMS — active speech (MacBook Air mic level)
 SILENCE_CHUNKS      = 20    # ~1.3s silence ends an utterance
 MIN_SPEECH_CHUNKS   = 8     # ~512ms minimum speech to process
+SV_PASS_THRESHOLD  = 0.60  # similarity >= this → verified owner
+SV_BLOCK_THRESHOLD = 0.55  # similarity <  this → blocked non-owner
 
 
 def _get_api_key() -> str:
@@ -837,12 +839,13 @@ class VikoLive:
                     if silence_count >= SILENCE_CHUNKS:
                         if speech_count >= MIN_SPEECH_CHUNKS:
                             pcm = b"".join(buf)
+                            sim = await loop.run_in_executor(
+                                None, self._sv.similarity, pcm
+                            )
                             is_owner = (
                                 self._verification_bypass
                                 or not self._sv.is_enrolled()
-                                or await loop.run_in_executor(
-                                    None, self._sv.verify, pcm
-                                )
+                                or sim >= SV_PASS_THRESHOLD
                             )
                             if is_owner:
                                 text = await loop.run_in_executor(
@@ -1211,8 +1214,8 @@ class VikoLive:
         loop = asyncio.get_running_loop()
         verify_buf:       list[bytes] = []
         VERIFY_CHUNKS     = 32    # 32 × 64ms ≈ 2s — minimum for reliable resemblyzer embedding
-        PASS_THRESHOLD    = 0.60  # far voice can drop to 0.60–0.65; non-owner tops at ~0.545
-        BLOCK_THRESHOLD   = 0.55
+        PASS_THRESHOLD    = SV_PASS_THRESHOLD
+        BLOCK_THRESHOLD   = SV_BLOCK_THRESHOLD
         RECOVERY_WINDOWS  = 5    # after 5 ambiguous windows (~10s) without clear non-owner, reopen
         verified_ok       = True
         ambiguous_streak  = 0
@@ -1232,6 +1235,7 @@ class VikoLive:
                     self.ui.write_log("SYS: Suara berhasil didaftarkan.")
                     verified_ok      = True
                     ambiguous_streak = 0
+                    verify_buf       = []   # discard pre-enroll overlap
                 continue
 
             # Accumulate for periodic verification
@@ -1413,6 +1417,8 @@ class VikoLive:
             print(f"[Viko] Playback error: {e}")
             raise
         finally:
+            if _speak_off_handle is not None:
+                _speak_off_handle.cancel()
             self.set_speaking(False)
             stream.stop()
             stream.close()
