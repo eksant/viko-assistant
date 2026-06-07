@@ -868,42 +868,31 @@ class _RootShim:
 
 
 def _make_app_icon() -> QIcon:
+    from pathlib import Path
+    icon_path = Path(__file__).resolve().parent.parent.parent / "assets" / "icon.png"
+    if icon_path.exists():
+        return QIcon(str(icon_path))
+
+    # Fallback: draw programmatically if file missing
     sz = 256
     px = QPixmap(sz, sz)
     px.fill(QColor(0, 0, 0, 0))
     p = QPainter(px)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
     cx = cy = sz // 2
-
-    # Dark background circle
     p.setPen(Qt.PenStyle.NoPen)
     p.setBrush(QColor(0, 8, 18))
     p.drawEllipse(4, 4, sz - 8, sz - 8)
-
-    # Radial glow
-    rg = QRadialGradient(cx, cy, cx - 4)
-    rg.setColorAt(0, QColor(0, 60, 90, 60))
-    rg.setColorAt(1, QColor(0, 0, 0, 0))
-    from PyQt6.QtGui import QBrush
-    p.setBrush(QBrush(rg))
-    p.drawEllipse(4, 4, sz - 8, sz - 8)
-
-    # Concentric rings
     for r, alpha, lw in [(108, 70, 2.5), (84, 100, 2), (60, 130, 2), (38, 90, 1.5)]:
         p.setPen(QPen(QColor(0, 212, 255, alpha), lw))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawEllipse(cx - r, cy - r, r * 2, r * 2)
-
-    # "V" letter centered
     from PyQt6.QtGui import QFont, QFontMetrics
     font = QFont("Courier New", 88, QFont.Weight.Bold)
     p.setFont(font)
     p.setPen(QColor(0, 212, 255, 230))
     fm = QFontMetrics(font)
-    tw = fm.horizontalAdvance("V")
-    th = fm.ascent()
-    p.drawText(cx - tw // 2, cy + th // 2 - 4, "V")
-
+    p.drawText(cx - fm.horizontalAdvance("V") // 2, cy + fm.ascent() // 2 - 4, "V")
     p.end()
     return QIcon(px)
 

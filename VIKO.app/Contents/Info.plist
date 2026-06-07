@@ -16,6 +16,8 @@
     <string>APPL</string>
     <key>CFBundleExecutable</key>
     <string>VIKO</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>VIKO uses your location to show the map marker at your actual position.</string>
     <key>NSLocationUsageDescription</key>
