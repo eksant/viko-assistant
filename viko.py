@@ -835,11 +835,21 @@ class VikoLive:
                     silence_count += 1
                     if silence_count >= SILENCE_CHUNKS:
                         if speech_count >= MIN_SPEECH_CHUNKS:
-                            pcm  = b"".join(buf)
-                            text = await loop.run_in_executor(None, stt.transcribe_pcm, pcm)
-                            if text.strip():
-                                self.ui.write_log(f"You [offline]: {text}")
-                                await self._offline_respond(text)
+                            pcm = b"".join(buf)
+                            is_owner = (
+                                self._verification_bypass
+                                or not self._sv.is_enrolled()
+                                or await loop.run_in_executor(
+                                    None, self._sv.verify, pcm
+                                )
+                            )
+                            if is_owner:
+                                text = await loop.run_in_executor(
+                                    None, stt.transcribe_pcm, pcm
+                                )
+                                if text.strip():
+                                    self.ui.write_log(f"You [offline]: {text}")
+                                    await self._offline_respond(text)
                         buf           = []
                         silence_count = 0
                         speech_count  = 0
