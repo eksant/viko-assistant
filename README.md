@@ -13,6 +13,7 @@ VIKO is a personal AI voice assistant built with PyQt6 and Google Gemini Live AP
 - **Live location & map** — GPS via macOS CoreLocation with Nominatim reverse geocoding; falls back to IP geolocation
 - **Embedded browser** — built-in Chromium browser panel with full AI control via CDP
 - **20+ skills** — web search, file management, app control, code generation, weather, flight lookup, reminders, and more
+- **Speaker verification** — voice profile enrollment and verification via resemblyzer embeddings
 - **Self-modification** — VIKO can add new skills, fix bugs, update its own prompt, or modify its UI via voice command
 - **Long-term memory** — vector memory and conversation history (SQLite + ChromaDB + Gemini embeddings)
 - **Dev agent** — builds complete projects from a voice description (plan → code → test → commit)
@@ -53,6 +54,7 @@ ANTHROPIC_API_KEY=your_anthropic_key      # optional — Claude for code gen
 OPENROUTER_API_KEY=your_openrouter_key    # optional — alternative LLM routing
 OS_SYSTEM=mac                             # mac | windows
 CAMERA_INDEX=0                            # webcam index
+OWNER_PASSPHRASE=...                      # optional — typed bypass for speaker verification
 
 # Optional: fixed coordinates override for map marker
 # Use when CoreLocation permission is not granted
@@ -102,6 +104,7 @@ viko/
     logger.py                — Structured logging (RotatingFileHandler)
     client.py                — LLM client (OpenRouter / Gemini wrapper)
     memory.py                — Long-term memory extraction
+    speaker_verifier.py      — Speaker embedding, enroll, verify (resemblyzer)
     conversation.py          — Session management, SQLite history
     context_builder.py       — Builds system context for Gemini
     vector_store.py          — ChromaDB semantic search (Gemini embeddings)

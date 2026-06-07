@@ -85,6 +85,7 @@ Backup is mandatory before any file change. Automatic rollback on test failure.
 | `viko/core/logger.py` | Structured logging — `get_logger()`, `read_recent()` |
 | `viko/core/client.py` | LLM client (OpenRouter / Gemini wrapper) |
 | `viko/core/memory.py` | Long-term memory extraction and storage |
+| `viko/core/speaker_verifier.py` | Speaker embedding, enroll, verify (resemblyzer) |
 | `viko/core/conversation.py` | Session message history |
 | `viko/core/context_builder.py` | Builds Gemini system context |
 | `viko/ui/window.py` | PyQt6 main window |
@@ -105,6 +106,7 @@ ANTHROPIC_API_KEY=...        # optional — Claude for code generation
 OPENROUTER_API_KEY=...       # optional
 OS_SYSTEM=mac                # mac | windows
 CAMERA_INDEX=0
+OWNER_PASSPHRASE=...         # optional — typed bypass for speaker verification (empty = bypass off)
 ```
 
 `.env` is gitignored. Never commit API keys.
@@ -113,7 +115,7 @@ CAMERA_INDEX=0
 
 ## What NOT to Do
 
-- Do not commit `.env`, `memory/*.db`, `memory/*.sqlite3`, or `workspace/` files
+- Do not commit `.env`, `memory/*.db`, `memory/*.sqlite3`, `memory/voice_profile.npy`, or `workspace/` files
 - Do not modify `viko/self_engineer/backups/` manually (gitignored, managed by backup.py)
 - Do not run destructive git commands (`reset --hard`, `push --force`) without explicit user confirmation
 - Do not add Indonesian comments or docstrings — user-facing strings only
