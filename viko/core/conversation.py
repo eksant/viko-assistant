@@ -262,6 +262,7 @@ def summarize_session_async(session_id: int, messages: list[dict]) -> None:
                 f"Summarize this conversation in 3-5 sentences. Focus on what was discussed, "
                 f"decided, or accomplished. Be factual and concise.\n\nConversation:\n{convo_text}",
                 system="You are a memory summarizer. Return a factual summary in 3-5 sentences.",
+                max_tokens=300,
             )
             if summary and summary.strip():
                 save_summary(session_id, summary.strip())

@@ -152,6 +152,7 @@ def should_extract_memory(user_text: str, viko_text: str, api_key: str = "") -> 
             f"- Any other fact worth remembering long-term\n\n"
             f"Reply only YES or NO.\n\nConversation:\n{combined}",
             system="You are a memory relevance checker. Reply only YES or NO.",
+            max_tokens=5,
         )
         return bool(result) and "YES" in result.upper()
 
@@ -193,6 +194,7 @@ def extract_memory(user_text: str, viko_text: str, api_key: str = "") -> dict:
             f' "notes":{{"works_at_night":{{"value":"usually active late at night"}}}}}}\n\n'
             f"Conversation:\n{combined}\n\nJSON:",
             system="Return ONLY valid JSON. No markdown, no explanation, no extra text.",
+            max_tokens=1024,
         )
 
         if not raw:
