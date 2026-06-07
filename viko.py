@@ -1240,22 +1240,26 @@ class VikoLive:
                 pcm = b"".join(verify_buf)
                 verify_buf = verify_buf[-8:]  # keep ~500ms overlap
                 if self._sv.is_enrolled() and not self._verification_bypass:
-                    sim = await loop.run_in_executor(None, self._sv.similarity, pcm)
-                    print(f"[SV] similarity={sim:.3f} verified={verified_ok}")
-                    if sim >= PASS_THRESHOLD:
-                        verified_ok      = True
-                        ambiguous_streak = 0
-                    elif sim < BLOCK_THRESHOLD:
-                        verified_ok      = False
-                        ambiguous_streak = 0
+                    # Skip verification on silence — don't let silence PCM close the gate
+                    if _rms(pcm) < SPEECH_THRESHOLD:
+                        print(f"[SV] silence window — gate unchanged (verified={verified_ok})")
                     else:
-                        # ambiguous (0.55–0.60): if blocked, count toward recovery
-                        if not verified_ok:
-                            ambiguous_streak += 1
-                            if ambiguous_streak >= RECOVERY_WINDOWS:
-                                verified_ok      = True  # non-owner gone, reopen
-                                ambiguous_streak = 0
-                                print("[SV] auto-recovery: reopened after silence")
+                        sim = await loop.run_in_executor(None, self._sv.similarity, pcm)
+                        print(f"[SV] similarity={sim:.3f} verified={verified_ok}")
+                        if sim >= PASS_THRESHOLD:
+                            verified_ok      = True
+                            ambiguous_streak = 0
+                        elif sim < BLOCK_THRESHOLD:
+                            verified_ok      = False
+                            ambiguous_streak = 0
+                        else:
+                            # ambiguous (0.55–0.60): if blocked, count toward recovery
+                            if not verified_ok:
+                                ambiguous_streak += 1
+                                if ambiguous_streak >= RECOVERY_WINDOWS:
+                                    verified_ok      = True  # non-owner gone, reopen
+                                    ambiguous_streak = 0
+                                    print("[SV] auto-recovery: reopened after silence")
 
             # Gate: forward real audio when verified; silence otherwise to keep
             # Gemini connection alive and prevent WebSocket timeout
@@ -1393,7 +1397,11 @@ class VikoLive:
                 data = b"".join(chunks)
                 await asyncio.to_thread(stream.write, data)
                 if self.audio_in_queue.empty():
-                    self.set_speaking(False)
+                    # Brief debounce: streaming chunks can have inter-chunk gaps.
+                    # Only open the mic if the queue is still empty after 150ms.
+                    await asyncio.sleep(0.15)
+                    if self.audio_in_queue.empty():
+                        self.set_speaking(False)
         except Exception as e:
             print(f"[Viko] Playback error: {e}")
             raise
