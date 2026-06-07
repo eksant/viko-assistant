@@ -648,9 +648,9 @@ class MainWindow(QMainWindow):
         System Settings → Privacy & Security → Location Services.
         We check the current status and guide the user accordingly.
         """
+        from viko.core.logger import get_logger as _gl
+        _log = _gl(__name__)
         try:
-            from viko.core.logger import get_logger as _gl
-            _log = _gl(__name__)
             import objc
 
             cl = {}
