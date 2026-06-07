@@ -37,6 +37,8 @@ def _make_ef() -> Any:
         key = get_gemini_key()
 
         class GeminiEF:
+            name = "gemini-text-embedding-004"
+
             def __call__(self, input: list[str]) -> list[list[float]]:  # noqa: A002
                 _client = genai.Client(api_key=key)
                 result = []

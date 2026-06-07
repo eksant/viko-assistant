@@ -908,6 +908,23 @@ def _make_app_icon() -> QIcon:
     return QIcon(px)
 
 
+def _set_macos_app_icon(qt_icon: QIcon) -> None:
+    """Push the Qt icon to NSApplication so dock and title bar use the same image."""
+    try:
+        import tempfile, os as _os
+        from AppKit import NSApplication, NSImage
+        px = qt_icon.pixmap(256, 256)
+        tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        tmp.close()
+        px.save(tmp.name, "PNG")
+        ns_img = NSImage.alloc().initWithContentsOfFile_(tmp.name)
+        if ns_img:
+            NSApplication.sharedApplication().setApplicationIconImage_(ns_img)
+        _os.unlink(tmp.name)
+    except Exception:
+        pass
+
+
 class VikoUI:
     def __init__(self, face_path: str, size=None):
         self._app = QApplication.instance() or QApplication(sys.argv)
@@ -916,6 +933,7 @@ class VikoUI:
         self._app.setWindowIcon(icon)
         self._win = MainWindow()
         self._win.setWindowIcon(icon)
+        _set_macos_app_icon(icon)
         self._win.show()
         self.root = _RootShim(self._app)
 
