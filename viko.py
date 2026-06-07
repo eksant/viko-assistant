@@ -628,6 +628,7 @@ class VikoLive:
         self._speaking_lock = threading.Lock()
         self._last_active   = 0.0
         self._session_id    = 0
+        self._offline_stt   = None  # pre-warmed OfflineSTT instance
         self.ui.on_text_command = self._on_text_command
         self.ui.on_file_command = self._on_file_command
 
@@ -671,6 +672,18 @@ class VikoLive:
             self._loop
         )
 
+    def _warmup_offline_stt(self) -> None:
+        """Download and load faster-whisper model in background thread (called once after connect)."""
+        try:
+            from viko.core.offline_stt import OfflineSTT
+            stt = OfflineSTT()
+            stt._load()
+            self._offline_stt = stt
+            print("[Viko] Offline STT model ready")
+            self.ui.write_log("SYS: Model offline siap.")
+        except Exception as _e:
+            print(f"[Viko] Offline STT warmup failed: {_e}")
+
     async def _offline_respond(self, text: str) -> None:
         """Get LLM reply for text and speak via macOS say. Used in offline mode."""
         loop = asyncio.get_running_loop()
@@ -711,7 +724,7 @@ class VikoLive:
         """
         from viko.core.offline_stt import OfflineSTT
 
-        stt = OfflineSTT()
+        stt = self._offline_stt or OfflineSTT()
         loop = asyncio.get_running_loop()
         audio_q: asyncio.Queue = asyncio.Queue()
 
@@ -1285,6 +1298,11 @@ class VikoLive:
                     print("[Viko] Connected.")
                     self.ui.set_state("LISTENING")
                     self.ui.write_log("SYS: Viko online.")
+
+                    # Pre-load offline STT model in background so offline mode starts instantly
+                    if self._offline_stt is None:
+                        self.ui.write_log("SYS: Mempersiapkan model offline...")
+                        threading.Thread(target=self._warmup_offline_stt, daemon=True).start()
 
                     # Announce self-update restart if flag was set by restarter.py
                     try:
