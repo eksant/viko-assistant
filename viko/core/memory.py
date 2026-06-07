@@ -138,11 +138,11 @@ def update_memory(memory_update: dict) -> dict:
 
 def should_extract_memory(user_text: str, viko_text: str, api_key: str = "") -> bool:
     try:
-        from viko.core.client import client
+        from viko.self_engineer.llm import generate_text
 
         combined = f"User: {user_text[:300]}\nViko: {viko_text[:1000]}"
 
-        result = client.chat(
+        result = generate_text(
             f"Does this conversation contain ANY of the following?\n"
             f"- Personal facts (name, age, city, job, birthday, nationality)\n"
             f"- Preferences or favorites (food, color, music, sport, game, film, book, etc.)\n"
@@ -152,8 +152,6 @@ def should_extract_memory(user_text: str, viko_text: str, api_key: str = "") -> 
             f"- Any other fact worth remembering long-term\n\n"
             f"Reply only YES or NO.\n\nConversation:\n{combined}",
             system="You are a memory relevance checker. Reply only YES or NO.",
-            max_tokens=5,
-            temperature=0.0,
         )
         return "YES" in result.upper()
 
@@ -164,11 +162,11 @@ def should_extract_memory(user_text: str, viko_text: str, api_key: str = "") -> 
 
 def extract_memory(user_text: str, viko_text: str, api_key: str = "") -> dict:
     try:
-        from viko.core.client import client
+        from viko.self_engineer.llm import generate_text
 
         combined = f"User: {user_text[:600]}\nViko: {viko_text[:300]}"
 
-        raw = client.chat(
+        raw = generate_text(
             f"Extract ALL memorable personal facts from this conversation. Any language.\n"
             f"Return ONLY valid JSON. Use {{}} if truly nothing is worth saving.\n\n"
             f"Category guide:\n"
@@ -195,8 +193,6 @@ def extract_memory(user_text: str, viko_text: str, api_key: str = "") -> dict:
             f' "notes":{{"works_at_night":{{"value":"usually active late at night"}}}}}}\n\n'
             f"Conversation:\n{combined}\n\nJSON:",
             system="Return ONLY valid JSON. No markdown, no explanation, no extra text.",
-            max_tokens=1024,
-            temperature=0.2,
         )
 
         clean = raw.strip()

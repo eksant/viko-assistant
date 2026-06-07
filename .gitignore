@@ -25,6 +25,7 @@ memory/*.db
 memory/*.sqlite3
 memory/long_term.json
 memory/voice_profile.npy
+memory/*/
 
 # Workspace files (user-generated content)
 workspace/**

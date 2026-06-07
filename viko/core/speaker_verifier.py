@@ -32,13 +32,16 @@ class SpeakerVerifier:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         np.save(str(self._path), embedding)
 
-    def verify(self, pcm_bytes: bytes) -> bool:
+    def similarity(self, pcm_bytes: bytes) -> float:
+        """Return raw cosine similarity (0-1) without threshold check."""
         if not self.is_enrolled():
-            return True
+            return 1.0
         stored    = np.load(str(self._path))
         candidate = self._embed(pcm_bytes)
-        similarity = float(
+        return float(
             np.dot(stored, candidate)
             / (np.linalg.norm(stored) * np.linalg.norm(candidate))
         )
-        return similarity >= SIMILARITY_THRESHOLD
+
+    def verify(self, pcm_bytes: bytes) -> bool:
+        return self.similarity(pcm_bytes) >= SIMILARITY_THRESHOLD

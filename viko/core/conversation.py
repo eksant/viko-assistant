@@ -252,18 +252,16 @@ def summarize_session_async(session_id: int, messages: list[dict]) -> None:
 
     def _run() -> None:
         try:
-            from viko.core.client import client
+            from viko.self_engineer.llm import generate_text
             if not messages:
                 return
             convo_text = "\n".join(
                 f"{m['role'].upper()}: {m['content']}" for m in messages[-30:]
             )
-            summary = client.chat(
+            summary = generate_text(
                 f"Summarize this conversation in 3-5 sentences. Focus on what was discussed, "
                 f"decided, or accomplished. Be factual and concise.\n\nConversation:\n{convo_text}",
                 system="You are a memory summarizer. Return a factual summary in 3-5 sentences.",
-                max_tokens=300,
-                temperature=0.3,
             )
             if summary and summary.strip():
                 save_summary(session_id, summary.strip())
