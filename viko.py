@@ -1409,9 +1409,11 @@ class VikoLive:
                     self.session        = session
                     self._loop          = asyncio.get_event_loop()
                     self.audio_in_queue = asyncio.Queue(maxsize=200)  # ~200 chunks × 42ms = ~8s headroom
-                    self.out_queue      = asyncio.Queue(maxsize=10)
+                    self.out_queue      = asyncio.Queue(maxsize=200)
                     self.raw_queue      = asyncio.Queue(maxsize=200)
                     self._last_active   = asyncio.get_event_loop().time()
+                    self._enrolling     = False
+                    self._enroll_buf    = []
 
                     # Start a new SQLite session
                     try:
