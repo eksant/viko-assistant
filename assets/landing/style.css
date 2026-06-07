@@ -69,3 +69,28 @@ body {
   transition: border-color 0.2s, background 0.2s;
 }
 .btn-outline:hover { border-color: var(--pri); background: rgba(0,212,255,0.05); }
+
+/* ════ HEADER ════ */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(0,0,0,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 48px; height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-brand { display: flex; align-items: center; gap: 12px; }
+.nav-logo { width: 32px; height: 32px; object-fit: contain; }
+.nav-name { font-size: 20px; font-weight: bold; color: var(--pri); letter-spacing: 4px; }
+.nav-links { display: flex; align-items: center; gap: 32px; }
+.nav-link {
+  font-size: 12px; color: var(--dim); letter-spacing: 2px;
+  text-decoration: none; text-transform: uppercase; transition: color 0.2s;
+}
+.nav-link:hover { color: var(--pri); }
+.nav-cta {
+  padding: 8px 20px; background: var(--pri); color: #000;
+  font-family: 'Courier New', monospace; font-size: 11px;
+  font-weight: bold; letter-spacing: 2px;
+  border-radius: 2px; text-decoration: none;
+}
