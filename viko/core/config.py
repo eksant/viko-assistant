@@ -1,10 +1,25 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-_BASE_DIR = Path(__file__).resolve().parent.parent.parent
-_ENV_PATH = _BASE_DIR / ".env"
 
+def _find_env_path() -> Path:
+    """Locate .env whether running from source or as a PyInstaller bundle."""
+    if getattr(sys, "frozen", False):
+        # Frozen: sys.executable is inside .app/Contents/MacOS/VIKO
+        # Walk up the directory tree to find where .env lives
+        for parent in Path(sys.executable).resolve().parents:
+            candidate = parent / ".env"
+            if candidate.exists():
+                return candidate
+        # Fallback: project root assumed to be 5 levels up from executable
+        # (.app/Contents/MacOS/VIKO → .app → dist → project)
+        return Path(sys.executable).resolve().parents[4] / ".env"
+    return Path(__file__).resolve().parent.parent.parent / ".env"
+
+
+_ENV_PATH = _find_env_path()
 load_dotenv(_ENV_PATH, override=False)
 
 
