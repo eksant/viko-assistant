@@ -13,6 +13,7 @@ pyperclip
 pygetwindow
 opencv-python
 numpy
+faster-whisper>=1.2.1
 mss
 psutil
 send2trash
