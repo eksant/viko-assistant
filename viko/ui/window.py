@@ -596,7 +596,7 @@ class MainWindow(QMainWindow):
         self._state_val = state
         if not self._muted and not self._paused:
             self._hud.set_state(state)
-        self._left.set_online(state != "IDLE")
+        self._left.set_online(state not in ("IDLE", "OFFLINE"))
 
     def _on_log(self, text: str):
         self._activity.append_log(text)

@@ -513,6 +513,7 @@ class HudCanvas(QWidget):
         elif s == "CODING":     self.state = "coding"
         elif s == "MUTED":      self._muted = True; self.state = "idle"
         elif s == "PAUSED":     self.state = "paused"
+        elif s == "OFFLINE":    self.state = "idle"
         else:                   self.state = "idle"
         if s != "MUTED":        self._muted = False
 
