@@ -10,9 +10,9 @@ cd "$(dirname "$0")/.."
 LOG="/tmp/viko.log"
 
 stop_existing() {
-    if pgrep -qf "python viko.py" 2>/dev/null; then
+    if pgrep -qf "viko\.py" 2>/dev/null; then
         echo "Stopping existing VIKO process..."
-        pkill -f "python viko.py" 2>/dev/null || true
+        pkill -f "viko\.py" 2>/dev/null || true
         sleep 1
     fi
 }

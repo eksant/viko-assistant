@@ -752,7 +752,8 @@ class MainWindow(QMainWindow):
                 )
 
                 def locationManager_didFailWithError_(self_d, mgr, err):
-                    _log.warning("CoreLocation error: %s", err)
+                    # Code=0 (kCLErrorLocationUnknown) is transient — not a real failure
+                    _log.debug("CoreLocation: %s", err)
 
                 locationManager_didFailWithError_ = objc.selector(
                     locationManager_didFailWithError_,
