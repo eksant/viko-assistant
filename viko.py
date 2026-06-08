@@ -770,8 +770,9 @@ class VikoLive:
             self.ui.write_log("SYS: Suara berhasil didaftarkan.")
 
         _first_connect = True
+        _reconnect = True
 
-        while True:
+        while _reconnect:
             try:
                 if _first_connect:
                     self.ui.set_boot_progress(0.6, "CONNECTING...")
@@ -859,18 +860,20 @@ class VikoLive:
                 try:
                     self.ui.set_state("OFFLINE")
                 except RuntimeError:
-                    return  # Qt window destroyed — exit reconnect loop cleanly
-                print("[Viko] Connection lost — offline mode")
-                try:
-                    await self._offline_mode()
-                except Exception as _oe:
-                    print(f"[Viko] Offline mode error: {_oe}")
-                try:
-                    self.ui.set_state("THINKING")
-                except RuntimeError:
-                    return
-                print("[Viko] Reconnecting...")
-                await asyncio.sleep(1)
+                    _reconnect = False  # Qt window destroyed — stop reconnect loop
+                if _reconnect:
+                    print("[Viko] Connection lost — offline mode")
+                    try:
+                        await self._offline_mode()
+                    except Exception as _oe:
+                        print(f"[Viko] Offline mode error: {_oe}")
+                    try:
+                        self.ui.set_state("THINKING")
+                    except RuntimeError:
+                        _reconnect = False
+                if _reconnect:
+                    print("[Viko] Reconnecting...")
+                    await asyncio.sleep(1)
 
 
 def main():
