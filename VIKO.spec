@@ -5,7 +5,7 @@ import sys
 
 block_cipher = None
 
-VENV = Path('.venv/lib/python3.13/site-packages')
+VENV = Path(f'.venv/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')
 WEBENG = VENV / 'PyQt6/Qt6/lib/QtWebEngineCore.framework'
 WEBENG_PROC = WEBENG / 'Helpers/QtWebEngineProcess.app/Contents/MacOS/QtWebEngineProcess'
 WEBENG_RES  = WEBENG / 'Resources'
