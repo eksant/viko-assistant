@@ -1189,7 +1189,8 @@ class VikoLive:
                         # Silero VAD requires 512-sample windows at 16kHz
                         half = pcm_f32[:512]
                         try:
-                            speech_prob = float(_vad(_torch.from_numpy(half), SEND_SAMPLE_RATE).detach())
+                            with _torch.no_grad():
+                                speech_prob = float(_vad(_torch.from_numpy(half), SEND_SAMPLE_RATE))
                         except Exception:
                             speech_prob = 1.0  # fallback: treat as speech on VAD error
                         item = {
