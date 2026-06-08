@@ -1286,7 +1286,12 @@ class VikoLive:
 
                     if response.data:
                         try:
-                            self.audio_in_queue.put_nowait(response.data)
+                            if self._viko_addressed and (
+                                self._sv_verified
+                                or self._verification_bypass
+                                or not self._sv.is_enrolled()
+                            ):
+                                self.audio_in_queue.put_nowait(response.data)
                         except asyncio.QueueFull:
                             pass  # drop chunk under load; preferable to crashing
 
@@ -1312,8 +1317,14 @@ class VikoLive:
                             txt = sc.input_transcription.text
                             if txt and not _is_ctrl_seq(txt):
                                 in_buf.append(txt)
+                                if not self._viko_addressed:
+                                    _acc = "".join(in_buf).lower()
+                                    if any(kw in _acc for kw in ("viko", "hei viko", "hey viko")):
+                                        self._viko_addressed = True
+                                        print("[Wake] 'viko' detected — gate open for this turn")
 
                         if sc.turn_complete:
+                            self._viko_addressed = False   # reset for next turn
                             self.set_speaking(False)
                             self._last_active = asyncio.get_event_loop().time()
 
