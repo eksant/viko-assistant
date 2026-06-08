@@ -43,7 +43,7 @@ else
     stop_existing
     start_ollama
     echo "Starting VIKO (dev) → log: $LOG"
-    nohup .venv/bin/python viko.py > "$LOG" 2>&1 &
+    nohup .venv/bin/python -u viko.py > "$LOG" 2>&1 &
     PID=$!
     echo "PID: $PID"
     echo ""

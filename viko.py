@@ -1530,6 +1530,41 @@ class VikoLive:
                 self.ui.write_log("SYS: Refreshing connection...")
                 raise RuntimeError("Session idle refresh")
 
+    async def _network_watchdog(self):
+        """Detect network loss within ~10s by probing 8.8.8.8:53 (Google DNS).
+
+        Raises RuntimeError when the probe fails 2 times in a row so the main
+        loop drops to offline mode instead of waiting up to 8 minutes for the
+        idle watchdog to fire.
+        """
+        PROBE_HOST    = "8.8.8.8"
+        PROBE_PORT    = 53
+        PROBE_TIMEOUT = 3.0
+        INTERVAL      = 10
+        failures      = 0
+
+        await asyncio.sleep(15)  # give Gemini time to finish its own connect
+        while True:
+            try:
+                loop = asyncio.get_running_loop()
+                await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda: __import__("socket").create_connection(
+                            (PROBE_HOST, PROBE_PORT), timeout=PROBE_TIMEOUT
+                        ).close()
+                    ),
+                    timeout=PROBE_TIMEOUT + 1,
+                )
+                failures = 0
+            except Exception:
+                failures += 1
+                print(f"[Net] probe failed ({failures}/2)")
+                if failures >= 2:
+                    print("[Net] network unreachable — dropping Gemini session")
+                    raise RuntimeError("Network unreachable")
+            await asyncio.sleep(INTERVAL)
+
     async def run(self):
         client = genai.Client(
             api_key=_get_api_key(),
@@ -1619,28 +1654,34 @@ class VikoLive:
                     tg.create_task(self._receive_audio())
                     tg.create_task(self._play_audio())
                     tg.create_task(self._session_watchdog())
+                    tg.create_task(self._network_watchdog())
                     tg.create_task(self._verify_and_forward())
 
-            except Exception as e:
-                print(f"[Viko] {e}")
+            except BaseException as e:
+                if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                    raise
+                print(f"[Viko] {type(e).__name__}: {e}")
                 traceback.print_exc()
+            finally:
+                # Always clean up session and enter offline mode before reconnect
+                if self._session_id:
+                    try:
+                        conv_end_session(self._session_id)
+                        msgs = get_recent_messages(30)
+                        summarize_session_async(self._session_id, msgs)
+                    except Exception as _e:
+                        print(f"[Conversation] Session end failed: {_e}")
 
-            # End session + trigger background summarization
-            if self._session_id:
+                self.set_speaking(False)
+                self.ui.set_state("OFFLINE")
+                print("[Viko] Connection lost — offline mode")
                 try:
-                    conv_end_session(self._session_id)
-                    msgs = get_recent_messages(30)
-                    summarize_session_async(self._session_id, msgs)
-                except Exception as _e:
-                    print(f"[Conversation] Session end failed: {_e}")
-
-            self.set_speaking(False)
-            self.ui.set_state("OFFLINE")
-            print("[Viko] Connection lost — offline mode")
-            await self._offline_mode()
-            self.ui.set_state("THINKING")
-            print("[Viko] Reconnecting...")
-            await asyncio.sleep(1)
+                    await self._offline_mode()
+                except Exception as _oe:
+                    print(f"[Viko] Offline mode error: {_oe}")
+                self.ui.set_state("THINKING")
+                print("[Viko] Reconnecting...")
+                await asyncio.sleep(1)
 
 
 def main():
