@@ -256,29 +256,6 @@ TOOL_DECLARATIONS = [
         }
     },
     {
-        "name": "browser_control",
-        "description": (
-            "Opens the EXTERNAL system browser (Chrome/Safari/Firefox) outside VIKO. "
-            "Use ONLY when the user explicitly asks to open the external/system browser. "
-            "For ALL other web tasks — navigation, search, browsing — use navigate_browser instead."
-        ),
-        "parameters": {
-            "type": "OBJECT",
-            "properties": {
-                "action":      {"type": "STRING", "description": "go_to | search | click | type | scroll | fill_form | smart_click | smart_type | get_text | press | close"},
-                "url":         {"type": "STRING", "description": "URL for go_to action"},
-                "query":       {"type": "STRING", "description": "Search query for search action"},
-                "selector":    {"type": "STRING", "description": "CSS selector for click/type"},
-                "text":        {"type": "STRING", "description": "Text to click or type"},
-                "description": {"type": "STRING", "description": "Element description for smart_click/smart_type"},
-                "direction":   {"type": "STRING", "description": "up or down for scroll"},
-                "key":         {"type": "STRING", "description": "Key name for press action"},
-                "incognito":   {"type": "BOOLEAN", "description": "Open in private/incognito mode"},
-            },
-            "required": ["action"]
-        }
-    },
-    {
         "name": "file_controller",
         "description": "Manages files and folders: list, create, delete, move, copy, rename, read, write, find, disk usage.",
         "parameters": {
