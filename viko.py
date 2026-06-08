@@ -1402,7 +1402,7 @@ class VikoLive:
             channels=CHANNELS,
             dtype="int16",
             blocksize=0,       # let PortAudio choose optimal block size
-            latency="high",    # bigger internal buffer = stutter-resistant
+            latency="low",     # smaller buffer = lower playback latency (~20-50ms vs ~300ms)
         )
         stream.start()
         loop = asyncio.get_running_loop()
