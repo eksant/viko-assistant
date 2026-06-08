@@ -41,6 +41,16 @@ def get_owner_passphrase() -> str:
     return os.environ.get("OWNER_PASSPHRASE", "").strip()
 
 
+def get_voice() -> str:
+    """Gemini Live prebuilt voice. Female: Aoede, Leda, Zephyr, Callirrhoe. Male: Puck, Charon."""
+    return os.environ.get("VIKO_VOICE", "").strip() or "Aoede"
+
+
+def get_voice_language() -> str:
+    """BCP-47 language for TTS pronunciation. Only honored by half-cascade Live models (gemini-3.x-live)."""
+    return os.environ.get("VIKO_VOICE_LANG", "").strip() or "id-ID"
+
+
 def get_os() -> str:
     return os.environ.get("OS_SYSTEM", "mac").lower()
 

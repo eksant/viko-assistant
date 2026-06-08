@@ -61,7 +61,13 @@ def get_base_dir():
 
 BASE_DIR            = get_base_dir()
 PROMPT_PATH         = BASE_DIR / "viko" / "prompt.txt"
-LIVE_MODEL          = "models/gemini-2.5-flash-native-audio-latest"
+# Half-cascade Live model. The gemini-2.5-flash-native-audio-* models have a
+# widely-reported bug (discuss.ai.google.dev/t/.../114644, livekit/agents#4545)
+# where the session rejects realtime audio input after a tool_call → WebSocket
+# 1008 "operation not supported" → drop. VIKO streams audio continuously, so it
+# hit this constantly. The 3.1 live model isn't native-audio, supports the same
+# Kore voice + tools, and doesn't have the bug.
+LIVE_MODEL          = "models/gemini-3.1-flash-live-preview"
 CHANNELS            = 1
 SEND_SAMPLE_RATE    = 16000
 RECEIVE_SAMPLE_RATE = 24000
@@ -74,6 +80,13 @@ MIN_SPEECH_CHUNKS   = 8     # ~512ms minimum speech to process
 # restores proper owner/stranger separation (owner should then score ~0.7+).
 SV_PASS_THRESHOLD  = 0.50  # similarity >= this → verified owner
 SV_BLOCK_THRESHOLD = 0.40  # similarity <  this → blocked non-owner
+
+# Wake-word output gating ("only reply when called Viko"). Disabled: gating
+# Gemini's audio post-hoc on the input transcription is racy (audio starts before
+# "Viko" is transcribed) and misses non-Latin transcriptions. Speaker verification
+# already restricts replies to the owner. The _is_viko_addressed matcher is kept
+# for a future non-racy (input-side) redesign. Flip to True to re-enable.
+WAKE_WORD_ENABLED = False
 
 
 def _get_api_key() -> str:
@@ -908,7 +921,7 @@ class VikoLive:
             async def _send_img():
                 data = p.read_bytes()
                 await self.session.send_realtime_input(
-                    media=types.Blob(mime_type=mime, data=data)
+                    video=types.Blob(mime_type=mime, data=data)
                 )
                 await self.session.send_client_content(
                     turns={"role": "user",
@@ -946,6 +959,7 @@ class VikoLive:
 
     def _build_config(self) -> types.LiveConnectConfig:
         from datetime import datetime
+        from viko.core.config import get_voice, get_voice_language
 
         sys_prompt = _load_system_prompt()
 
@@ -974,9 +988,10 @@ class VikoLive:
             speech_config=types.SpeechConfig(
                 voice_config=types.VoiceConfig(
                     prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                        voice_name="Kore"
+                        voice_name=get_voice()
                     )
-                )
+                ),
+                language_code=get_voice_language(),
             ),
         )
 
@@ -1173,7 +1188,10 @@ class VikoLive:
     async def _send_realtime(self):
         while True:
             msg = await self.out_queue.get()
-            await self.session.send_realtime_input(media=msg)
+            # 3.1 live API: media= is deprecated, use audio= (typed Blob)
+            await self.session.send_realtime_input(
+                audio=types.Blob(data=msg["data"], mime_type=msg["mime_type"])
+            )
 
     async def _listen_audio(self):
         import threading as _threading
@@ -1317,7 +1335,8 @@ class VikoLive:
 
                     if response.data:
                         try:
-                            if self._viko_addressed and (
+                            addressed = self._viko_addressed or not WAKE_WORD_ENABLED
+                            if addressed and (
                                 self._sv_verified
                                 or self._verification_bypass
                                 or not self._sv.is_enrolled()
@@ -1348,7 +1367,8 @@ class VikoLive:
                             txt = sc.input_transcription.text
                             if txt and not _is_ctrl_seq(txt):
                                 in_buf.append(txt)
-                                if not self._viko_addressed and _is_viko_addressed("".join(in_buf)):
+                                if WAKE_WORD_ENABLED and not self._viko_addressed \
+                                        and _is_viko_addressed("".join(in_buf)):
                                     self._viko_addressed = True
                                     print(f"[Viko] wake word detected — gate open ({txt!r})")
 
@@ -1515,7 +1535,10 @@ class VikoLive:
                 ):
                     self.session        = session
                     self._loop          = asyncio.get_event_loop()
-                    self.audio_in_queue = asyncio.Queue(maxsize=200)  # ~200 chunks × 42ms = ~8s headroom
+                    # Gemini streams a full reply faster than real-time playback, so this
+                    # buffer must hold an ENTIRE response or long replies get truncated when
+                    # _receive_audio drops chunks on QueueFull. 2000 chunks ≈ 80s of speech.
+                    self.audio_in_queue = asyncio.Queue(maxsize=2000)
                     self.out_queue      = asyncio.Queue(maxsize=200)  # sized to hold full utterance burst from _verify_and_forward
                     self.raw_queue      = asyncio.Queue(maxsize=200)
                     self._last_active   = asyncio.get_event_loop().time()
