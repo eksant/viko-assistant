@@ -1,6 +1,6 @@
 # Speaker Verification Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** VIKO hanya merespons suara owner — non-owner audio diabaikan diam-diam, baik online (Gemini Live) maupun offline (faster-whisper).
 
@@ -31,7 +31,7 @@
 **Files:**
 - Modify: `requirements.txt`
 
-- [ ] **Step 1: Add resemblyzer to requirements.txt**
+- [x] **Step 1: Add resemblyzer to requirements.txt**
 
   In `requirements.txt`, after `faster-whisper>=1.2.1`:
 
@@ -39,7 +39,7 @@
   resemblyzer>=0.1.1
   ```
 
-- [ ] **Step 2: Install it**
+- [x] **Step 2: Install it**
 
   ```bash
   .venv/bin/pip install resemblyzer>=0.1.1
@@ -47,7 +47,7 @@
 
   Expected: package installs without errors. It downloads a pretrained encoder model (~50MB) on first use.
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
   ```bash
   .venv/bin/python -c "from resemblyzer import VoiceEncoder, preprocess_wav; print('ok')"
@@ -55,7 +55,7 @@
 
   Expected: `ok`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
   ```bash
   git add requirements.txt
@@ -70,7 +70,7 @@
 - Create: `viko/core/speaker_verifier.py`
 - Create: `tests/core/test_speaker_verifier.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
   Create `tests/core/test_speaker_verifier.py`:
 
@@ -131,7 +131,7 @@
           assert self.sv.verify(_make_pcm()) is True
   ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
   ```bash
   .venv/bin/python -m pytest tests/core/test_speaker_verifier.py -v
@@ -139,7 +139,7 @@
 
   Expected: `ModuleNotFoundError: No module named 'viko.core.speaker_verifier'`
 
-- [ ] **Step 3: Implement SpeakerVerifier**
+- [x] **Step 3: Implement SpeakerVerifier**
 
   Create `viko/core/speaker_verifier.py`:
 
@@ -190,7 +190,7 @@
           return similarity >= SIMILARITY_THRESHOLD
   ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
   ```bash
   .venv/bin/python -m pytest tests/core/test_speaker_verifier.py -v
@@ -198,7 +198,7 @@
 
   Expected: `6 passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add viko/core/speaker_verifier.py tests/core/test_speaker_verifier.py
@@ -212,7 +212,7 @@
 **Files:**
 - Modify: `viko/core/config.py:49-60`
 
-- [ ] **Step 1: Add `get_owner_passphrase()` after `get_openrouter_key()`**
+- [x] **Step 1: Add `get_owner_passphrase()` after `get_openrouter_key()`**
 
   In `viko/core/config.py`, after `get_openrouter_key()` (currently ends around line 37), add:
 
@@ -221,7 +221,7 @@
       return os.environ.get("OWNER_PASSPHRASE", "").strip()
   ```
 
-- [ ] **Step 2: Add `owner_passphrase` parameter to `save_keys()`**
+- [x] **Step 2: Add `owner_passphrase` parameter to `save_keys()`**
 
   Replace the current `save_keys` signature and body (lines 49–60):
 
@@ -248,7 +248,7 @@
       _write_env_dict(data)
   ```
 
-- [ ] **Step 3: Verify no syntax errors**
+- [x] **Step 3: Verify no syntax errors**
 
   ```bash
   .venv/bin/python -c "from viko.core.config import get_owner_passphrase, save_keys; print('ok')"
@@ -256,7 +256,7 @@
 
   Expected: `ok`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
   ```bash
   git add viko/core/config.py
@@ -272,7 +272,7 @@
 - Modify: `viko/ui/window.py:33` (imports)
 - Modify: `viko/ui/window.py:606-612` (`_on_api_key` handler)
 
-- [ ] **Step 1: Add `save_keys` to the config import in window.py**
+- [x] **Step 1: Add `save_keys` to the config import in window.py**
 
   Line 33 currently:
   ```python
@@ -284,7 +284,7 @@
   from viko.core.config import is_configured, get_gemini_key, save_keys
   ```
 
-- [ ] **Step 2: Change `done` signal to emit two strings**
+- [x] **Step 2: Change `done` signal to emit two strings**
 
   Line 81 currently:
   ```python
@@ -296,7 +296,7 @@
   done = pyqtSignal(str, str)   # emits (gemini_api_key, owner_passphrase)
   ```
 
-- [ ] **Step 3: Add OWNER_PASSPHRASE field to the form**
+- [x] **Step 3: Add OWNER_PASSPHRASE field to the form**
 
   After the existing `lay.addWidget(self._key, ...)` block (currently line 107) and before the button, insert:
 
@@ -322,7 +322,7 @@
         self._pass.returnPressed.connect(self._submit)
   ```
 
-- [ ] **Step 4: Update `_submit()` to emit both values**
+- [x] **Step 4: Update `_submit()` to emit both values**
 
   Replace current `_submit()` (lines 120–123):
 
@@ -333,7 +333,7 @@
               self.done.emit(key, self._pass.text().strip())
   ```
 
-- [ ] **Step 5: Update `_on_api_key` to accept and save passphrase**
+- [x] **Step 5: Update `_on_api_key` to accept and save passphrase**
 
   Replace current `_on_api_key` (lines 606–612):
 
@@ -347,7 +347,7 @@
           self._activity.append_log("SYS: Initialised. Viko online.")
   ```
 
-- [ ] **Step 6: Verify no syntax errors**
+- [x] **Step 6: Verify no syntax errors**
 
   ```bash
   .venv/bin/python -c "from viko.ui.window import MainWindow; print('ok')"
@@ -355,7 +355,7 @@
 
   Expected: `ok` (Qt may need a display but import should succeed)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
   ```bash
   git add viko/ui/window.py
@@ -370,7 +370,7 @@
 - Modify: `viko.py:620-636` (`__init__` additions)
 - Modify: `viko.py:1257-1270` (`run()` before while loop)
 
-- [ ] **Step 1: Import SpeakerVerifier and get_owner_passphrase at top of viko.py**
+- [x] **Step 1: Import SpeakerVerifier and get_owner_passphrase at top of viko.py**
 
   After the existing `from viko.core.logger import get_logger` import (line 26), add:
 
@@ -380,7 +380,7 @@
 
   `get_owner_passphrase` will be lazy-imported inline (same pattern as `get_gemini_key`).
 
-- [ ] **Step 2: Add state fields to `VikoLive.__init__`**
+- [x] **Step 2: Add state fields to `VikoLive.__init__`**
 
   In `__init__` (after `self._offline_stt = None` on line 634), add:
 
@@ -393,7 +393,7 @@
           self.raw_queue            = None
   ```
 
-- [ ] **Step 3: Add `_enroll_voice()` async method to VikoLive**
+- [x] **Step 3: Add `_enroll_voice()` async method to VikoLive**
 
   Add this method after `_warmup_offline_stt()` (around line 688):
 
@@ -424,7 +424,7 @@
           await loop.run_in_executor(None, self._sv.enroll, pcm)
   ```
 
-- [ ] **Step 4: Add enrollment step in `run()` before the while loop**
+- [x] **Step 4: Add enrollment step in `run()` before the while loop**
 
   In `run()` after `self.ui.set_boot_progress(0.35, "BUILDING CONTEXT...")` (line 1266) and before `_first_connect = True` (line 1269), insert:
 
@@ -437,7 +437,7 @@
               self.ui.write_log("SYS: Suara berhasil didaftarkan.")
   ```
 
-- [ ] **Step 5: Verify no syntax errors**
+- [x] **Step 5: Verify no syntax errors**
 
   ```bash
   .venv/bin/python -c "import viko; print('ok')"
@@ -445,7 +445,7 @@
 
   Expected: `ok`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
   ```bash
   git add viko.py
@@ -459,7 +459,7 @@
 **Files:**
 - Modify: `viko.py:638-657` (`_on_text_command`)
 
-- [ ] **Step 1: Add `_start_re_enrollment()` async method to VikoLive**
+- [x] **Step 1: Add `_start_re_enrollment()` async method to VikoLive**
 
   Add after `_enroll_voice()`:
 
@@ -472,7 +472,7 @@
           self._enrolling     = True
   ```
 
-- [ ] **Step 2: Update `_on_text_command()` to check passphrase and re-enrollment phrase**
+- [x] **Step 2: Update `_on_text_command()` to check passphrase and re-enrollment phrase**
 
   Replace the current body of `_on_text_command()` (lines 638–657):
 
@@ -521,7 +521,7 @@
           fut.add_done_callback(_on_done)
   ```
 
-- [ ] **Step 3: Verify no syntax errors**
+- [x] **Step 3: Verify no syntax errors**
 
   ```bash
   .venv/bin/python -c "import viko; print('ok')"
@@ -529,7 +529,7 @@
 
   Expected: `ok`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
   ```bash
   git add viko.py
@@ -545,7 +545,7 @@
 - Modify: `viko.py:1075-1106` (`_listen_audio()`)
 - Add: new method `_verify_and_forward()` in VikoLive
 
-- [ ] **Step 1: Initialize `raw_queue` in `run()` alongside `out_queue`**
+- [x] **Step 1: Initialize `raw_queue` in `run()` alongside `out_queue`**
 
   In `run()`, find where `out_queue` is initialized (line ~1286):
   ```python
@@ -557,14 +557,14 @@
   self.raw_queue = asyncio.Queue(maxsize=200)
   ```
 
-- [ ] **Step 2: Add `_verify_and_forward()` as 6th task in TaskGroup**
+- [x] **Step 2: Add `_verify_and_forward()` as 6th task in TaskGroup**
 
   After `tg.create_task(self._session_watchdog())` (line 1330), add:
   ```python
                   tg.create_task(self._verify_and_forward())
   ```
 
-- [ ] **Step 3: Change `_listen_audio()` to send to `raw_queue`**
+- [x] **Step 3: Change `_listen_audio()` to send to `raw_queue`**
 
   In `_listen_audio()` callback (lines 1083–1091), change `self.out_queue` to `self.raw_queue`:
 
@@ -603,7 +603,7 @@
               raise
   ```
 
-- [ ] **Step 4: Implement `_verify_and_forward()`**
+- [x] **Step 4: Implement `_verify_and_forward()`**
 
   Add this method after `_listen_audio()`:
 
@@ -667,7 +667,7 @@
                       in_speech     = False
   ```
 
-- [ ] **Step 5: Verify no syntax errors**
+- [x] **Step 5: Verify no syntax errors**
 
   ```bash
   .venv/bin/python -c "import viko; print('ok')"
@@ -675,7 +675,7 @@
 
   Expected: `ok`
 
-- [ ] **Step 6: Run full test suite to confirm no regressions**
+- [x] **Step 6: Run full test suite to confirm no regressions**
 
   ```bash
   .venv/bin/python -m pytest tests/ -v
@@ -683,7 +683,7 @@
 
   Expected: all tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
   ```bash
   git add viko.py
@@ -697,7 +697,7 @@
 **Files:**
 - Modify: `viko.py:776-785` (inside `_offline_mode()` VAD block)
 
-- [ ] **Step 1: Add verify block before transcribe in `_offline_mode()`**
+- [x] **Step 1: Add verify block before transcribe in `_offline_mode()`**
 
   In `_offline_mode()`, the utterance-complete block currently reads (around lines 776–785):
 
@@ -741,7 +741,7 @@
                           in_speech     = False
   ```
 
-- [ ] **Step 2: Verify no syntax errors**
+- [x] **Step 2: Verify no syntax errors**
 
   ```bash
   .venv/bin/python -c "import viko; print('ok')"
@@ -749,7 +749,7 @@
 
   Expected: `ok`
 
-- [ ] **Step 3: Run full test suite**
+- [x] **Step 3: Run full test suite**
 
   ```bash
   .venv/bin/python -m pytest tests/ -v
@@ -757,7 +757,7 @@
 
   Expected: all tests pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
   ```bash
   git add viko.py
@@ -773,7 +773,7 @@
 - Modify: `CLAUDE.md`
 - Modify: `README.md`
 
-- [ ] **Step 1: Add voice profile to .gitignore**
+- [x] **Step 1: Add voice profile to .gitignore**
 
   In `.gitignore`, after `memory/*.sqlite3` block, add:
 
@@ -781,7 +781,7 @@
   memory/voice_profile.npy
   ```
 
-- [ ] **Step 2: Update CLAUDE.md — env section**
+- [x] **Step 2: Update CLAUDE.md — env section**
 
   In `CLAUDE.md` under the `## Environment` code block, add after `CAMERA_INDEX=0`:
 
@@ -789,7 +789,7 @@
   OWNER_PASSPHRASE=...     # optional — typed bypass for speaker verification (empty = bypass off)
   ```
 
-- [ ] **Step 3: Update CLAUDE.md — key files table**
+- [x] **Step 3: Update CLAUDE.md — key files table**
 
   In `CLAUDE.md` under `## Key Files`, add a row after `viko/core/memory.py`:
 
@@ -802,13 +802,13 @@
   - Do not commit `.env`, `memory/*.db`, `memory/*.sqlite3`, `memory/voice_profile.npy`, or `workspace/` files
   ```
 
-- [ ] **Step 4: Update README.md**
+- [x] **Step 4: Update README.md**
 
   Locate the features list and add speaker verification. Locate the environment variables section and add `OWNER_PASSPHRASE`. If there's an architecture/file tree section, add `viko/core/speaker_verifier.py`.
 
   (The exact lines depend on current README content — make minimal additions consistent with existing style.)
 
-- [ ] **Step 5: Verify .gitignore is correct**
+- [x] **Step 5: Verify .gitignore is correct**
 
   ```bash
   git check-ignore -v memory/voice_profile.npy
@@ -816,7 +816,7 @@
 
   Expected: `.gitignore:XX:memory/voice_profile.npy    memory/voice_profile.npy`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
   ```bash
   git add .gitignore CLAUDE.md README.md

@@ -1,6 +1,8 @@
 # viko/ui_widgets.py
 from __future__ import annotations
-import math, time, os
+import math
+import time
+import os
 from PyQt6.QtCore import Qt, QTimer, QRectF, QPointF, pyqtSignal
 from PyQt6.QtGui import (
     QColor, QPainter, QPainterPath, QPen, QBrush,
@@ -739,7 +741,8 @@ class LogWidget(QTextEdit):
                 self._tag = tag; break
         else:
             self._tag = "sys"
-        self._text = raw; self._pos = 0
+        from datetime import datetime
+        self._text = f"{datetime.now():%H:%M} {raw}"; self._pos = 0
         self._tmr.start(6)
 
     def _step(self):

@@ -1,6 +1,6 @@
 # VIKO Landing Page Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build a static GitHub Pages landing page for VIKO that matches the approved design mockup, split across three clean files.
 
@@ -33,19 +33,19 @@
 - Create: `assets/landing/style.css`
 - Create: `assets/landing/main.js`
 
-- [ ] **Step 1: Create `assets/landing/style.css`** with empty placeholder
+- [x] **Step 1: Create `assets/landing/style.css`** with empty placeholder
 
 ```css
 /* VIKO Landing Page — styles */
 ```
 
-- [ ] **Step 2: Create `assets/landing/main.js`** with empty placeholder
+- [x] **Step 2: Create `assets/landing/main.js`** with empty placeholder
 
 ```js
 // VIKO Landing Page — main.js
 ```
 
-- [ ] **Step 3: Create `index.html`** with full boilerplate
+- [x] **Step 3: Create `index.html`** with full boilerplate
 
 ```html
 <!DOCTYPE html>
@@ -73,7 +73,7 @@
 </html>
 ```
 
-- [ ] **Step 4: Verify — open in browser**
+- [x] **Step 4: Verify — open in browser**
 
 ```bash
 python3 -m http.server 8080
@@ -82,7 +82,7 @@ python3 -m http.server 8080
 
 Expected: blank black page, no 404 errors in console for CSS/JS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add index.html assets/landing/style.css assets/landing/main.js
@@ -96,7 +96,7 @@ git commit -m "feat: scaffold landing page file structure"
 **Files:**
 - Modify: `assets/landing/style.css`
 
-- [ ] **Step 1: Write base styles into `assets/landing/style.css`**
+- [x] **Step 1: Write base styles into `assets/landing/style.css`**
 
 ```css
 /* VIKO Landing Page — styles */
@@ -172,7 +172,7 @@ body {
 .btn-outline:hover { border-color: var(--pri); background: rgba(0,212,255,0.05); }
 ```
 
-- [ ] **Step 2: Verify — open in browser**
+- [x] **Step 2: Verify — open in browser**
 
 ```bash
 # http://localhost:8080 (server from Task 1)
@@ -180,7 +180,7 @@ body {
 
 Expected: blank black page, body font is Courier New (inspect → computed).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add assets/landing/style.css
@@ -195,7 +195,7 @@ git commit -m "feat: add CSS variables, reset, and base utility styles"
 - Modify: `index.html` (replace `<!-- HEADER -->` comment)
 - Modify: `assets/landing/style.css` (append header CSS)
 
-- [ ] **Step 1: Add header HTML** — replace `<!-- HEADER -->` in `index.html`
+- [x] **Step 1: Add header HTML** — replace `<!-- HEADER -->` in `index.html`
 
 ```html
 <header>
@@ -212,7 +212,7 @@ git commit -m "feat: add CSS variables, reset, and base utility styles"
 </header>
 ```
 
-- [ ] **Step 2: Add header CSS** — append to `assets/landing/style.css`
+- [x] **Step 2: Add header CSS** — append to `assets/landing/style.css`
 
 ```css
 /* ════ HEADER ════ */
@@ -241,11 +241,11 @@ header {
 }
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Open `http://localhost:8080`. Expected: dark sticky header with VIKO logo (or broken img placeholder), cyan VIKO text, nav links, cyan CTA button. Header stays fixed on scroll.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add index.html assets/landing/style.css
@@ -260,7 +260,7 @@ git commit -m "feat: add sticky header with logo and nav"
 - Modify: `index.html` (replace `<!-- HERO -->`)
 - Modify: `assets/landing/style.css` (append hero CSS)
 
-- [ ] **Step 1: Add hero HTML** — replace `<!-- HERO -->` in `index.html`
+- [x] **Step 1: Add hero HTML** — replace `<!-- HERO -->` in `index.html`
 
 ```html
 <section class="hero">
@@ -293,7 +293,7 @@ git commit -m "feat: add sticky header with logo and nav"
 </section>
 ```
 
-- [ ] **Step 2: Add hero CSS** — append to `assets/landing/style.css`
+- [x] **Step 2: Add hero CSS** — append to `assets/landing/style.css`
 
 ```css
 /* ════ HERO ════ */
@@ -364,11 +364,11 @@ git commit -m "feat: add sticky header with logo and nav"
 @keyframes vbar { from { transform: scaleY(0.25); } to { transform: scaleY(1); } }
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Open `http://localhost:8080`. Expected: 600px hero — faint dashboard screenshot as BG, gradient overlays, cyan "VIKO" title (80px), animated voice bar, tagline, two CTA buttons. HUD div exists but is empty (no JS yet — next task).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add index.html assets/landing/style.css
@@ -382,7 +382,7 @@ git commit -m "feat: add hero section with layered background and voice bar"
 **Files:**
 - Modify: `assets/landing/main.js`
 
-- [ ] **Step 1: Write HUD animation** — replace content of `assets/landing/main.js`
+- [x] **Step 1: Write HUD animation** — replace content of `assets/landing/main.js`
 
 ```js
 // VIKO Landing Page — main.js
@@ -491,11 +491,11 @@ git commit -m "feat: add hero section with layered background and voice bar"
 }());
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Open `http://localhost:8080`. Expected: HUD circle appears right of hero center — 10 concentric rings, amber arc rotating clockwise, orange arc rotating counter-clockwise, 3 pulse waves expanding from center. Animation runs smoothly.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add assets/landing/main.js
@@ -510,7 +510,7 @@ git commit -m "feat: add animated HUD circle with dual arcs and pulse waves"
 - Modify: `index.html` (replace `<!-- WHY VIKO -->`)
 - Modify: `assets/landing/style.css` (append)
 
-- [ ] **Step 1: Add Why VIKO HTML** — replace `<!-- WHY VIKO -->` in `index.html`
+- [x] **Step 1: Add Why VIKO HTML** — replace `<!-- WHY VIKO -->` in `index.html`
 
 ```html
 <section class="story">
@@ -544,7 +544,7 @@ git commit -m "feat: add animated HUD circle with dual arcs and pulse waves"
 </section>
 ```
 
-- [ ] **Step 2: Add Why VIKO CSS** — append to `assets/landing/style.css`
+- [x] **Step 2: Add Why VIKO CSS** — append to `assets/landing/style.css`
 
 ```css
 /* ════ WHY VIKO ════ */
@@ -579,11 +579,11 @@ git commit -m "feat: add animated HUD circle with dual arcs and pulse waves"
 .stat-label { font-size: 13px; color: var(--body); letter-spacing: 1px; }
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Scroll past hero. Expected: 2-column section — story text left (3 paragraphs, "personal" in cyan), 3 stat blocks right (20+, 100%, Live) with cyan/amber/green left borders.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add index.html assets/landing/style.css
@@ -598,7 +598,7 @@ git commit -m "feat: add Why VIKO story section with stats"
 - Modify: `index.html` (replace `<!-- FEATURES -->`)
 - Modify: `assets/landing/style.css` (append)
 
-- [ ] **Step 1: Add Features HTML** — replace `<!-- FEATURES -->` in `index.html`
+- [x] **Step 1: Add Features HTML** — replace `<!-- FEATURES -->` in `index.html`
 
 ```html
 <section class="features" id="features">
@@ -653,7 +653,7 @@ git commit -m "feat: add Why VIKO story section with stats"
 </section>
 ```
 
-- [ ] **Step 2: Add Features CSS** — append to `assets/landing/style.css`
+- [x] **Step 2: Add Features CSS** — append to `assets/landing/style.css`
 
 ```css
 /* ════ FEATURES ════ */
@@ -677,11 +677,11 @@ git commit -m "feat: add Why VIKO story section with stats"
 .feature-desc { font-size: 14px; color: var(--body); line-height: 1.7; flex: 1; }
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Scroll to features. Expected: 4×2 grid of dark cards, each with a symbol icon (cyan/amber/green), bold name, description. Cards have a subtle background shift on hover.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add index.html assets/landing/style.css
@@ -696,7 +696,7 @@ git commit -m "feat: add 8-card features grid"
 - Modify: `index.html` (replace `<!-- SCREENSHOTS -->`)
 - Modify: `assets/landing/style.css` (append)
 
-- [ ] **Step 1: Add Screenshots HTML** — replace `<!-- SCREENSHOTS -->` in `index.html`
+- [x] **Step 1: Add Screenshots HTML** — replace `<!-- SCREENSHOTS -->` in `index.html`
 
 ```html
 <section class="screenshots" id="preview">
@@ -738,7 +738,7 @@ git commit -m "feat: add 8-card features grid"
 </section>
 ```
 
-- [ ] **Step 2: Add Screenshots CSS** — append to `assets/landing/style.css`
+- [x] **Step 2: Add Screenshots CSS** — append to `assets/landing/style.css`
 
 ```css
 /* ════ SCREENSHOTS ════ */
@@ -753,11 +753,11 @@ git commit -m "feat: add 8-card features grid"
 .shot-caption strong { display: block; color: var(--txt); margin-bottom: 2px; letter-spacing: 2px; }
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Scroll to screenshots. Expected: 3-column grid on dark card background, each with a 16:10 image (actual screenshots now visible!), bold section label, and description below.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add index.html assets/landing/style.css
@@ -772,7 +772,7 @@ git commit -m "feat: add 3-panel screenshots section"
 - Modify: `index.html` (replace `<!-- GITHUB CTA -->` and `<!-- FOOTER -->`)
 - Modify: `assets/landing/style.css` (append)
 
-- [ ] **Step 1: Add GitHub CTA + Footer HTML**
+- [x] **Step 1: Add GitHub CTA + Footer HTML**
 
 Replace `<!-- GITHUB CTA -->` in `index.html`:
 
@@ -822,7 +822,7 @@ Replace `<!-- FOOTER -->` in `index.html`:
 </footer>
 ```
 
-- [ ] **Step 2: Add GitHub CTA + Footer CSS** — append to `assets/landing/style.css`
+- [x] **Step 2: Add GitHub CTA + Footer CSS** — append to `assets/landing/style.css`
 
 ```css
 /* ════ GITHUB CTA ════ */
@@ -854,11 +854,11 @@ footer { padding: 40px 64px; display: flex; justify-content: space-between; alig
 .footer-copy { font-size: 11px; color: var(--dim); }
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Scroll to bottom. Expected: centered GitHub CTA with tech pills (cyan/amber/muted), large cyan GitHub button. Footer: logo+VIKO left, links+email center, copyright right. All footer text visible.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add index.html assets/landing/style.css
@@ -872,7 +872,7 @@ git commit -m "feat: add GitHub CTA section and footer"
 **Files:**
 - Modify: `assets/landing/main.js` (append)
 
-- [ ] **Step 1: Append scroll reveal to `assets/landing/main.js`**
+- [x] **Step 1: Append scroll reveal to `assets/landing/main.js`**
 
 ```js
 // ── Scroll reveal ────────────────────────────────────────────────────────────
@@ -885,11 +885,11 @@ git commit -m "feat: add GitHub CTA section and footer"
 }());
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Reload page. Scroll slowly through all sections. Expected: each `.reveal` element fades in and slides up as it enters the viewport. Elements above the fold are immediately visible. No flicker.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add assets/landing/main.js
@@ -903,7 +903,7 @@ git commit -m "feat: add scroll reveal with IntersectionObserver"
 **Files:**
 - Modify: `assets/landing/style.css` (append)
 
-- [ ] **Step 1: Append responsive CSS to `assets/landing/style.css`**
+- [x] **Step 1: Append responsive CSS to `assets/landing/style.css`**
 
 ```css
 /* ════ RESPONSIVE ════ */
@@ -958,15 +958,15 @@ git commit -m "feat: add scroll reveal with IntersectionObserver"
 }
 ```
 
-- [ ] **Step 2: Verify tablet layout**
+- [x] **Step 2: Verify tablet layout**
 
 Open DevTools → toggle device toolbar → set width to 800px. Expected: features grid 2-col, screenshots 2-col, story stacks vertically.
 
-- [ ] **Step 3: Verify mobile layout**
+- [x] **Step 3: Verify mobile layout**
 
 Set width to 375px. Expected: header shows only logo + CTA button, hero stacks vertically with faint HUD, all grids single column, buttons full-width.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add assets/landing/style.css
@@ -980,18 +980,18 @@ git commit -m "feat: add responsive breakpoints for tablet and mobile"
 **Files:**
 - None new — verification and deploy only
 
-- [ ] **Step 1: Full page visual check**
+- [x] **Step 1: Full page visual check**
 
 Open `http://localhost:8080`. Check each section in order:
-- [ ] Header sticks on scroll, logo visible, all nav links work
-- [ ] Hero: HUD animation running, voice bar animated, faint screenshot BG visible, text readable
-- [ ] Why VIKO: 2-column story + 3 stat blocks visible, scroll reveal works
-- [ ] Features: 4×2 grid, icons colored (cyan/amber/green), hover effect works
-- [ ] Screenshots: 3 images fully visible (dashboard, text-chat, voice-chat)
-- [ ] GitHub CTA: tech pills visible, GitHub button links correctly
-- [ ] Footer: email visible, copyright text visible
+- [x] Header sticks on scroll, logo visible, all nav links work
+- [x] Hero: HUD animation running, voice bar animated, faint screenshot BG visible, text readable
+- [x] Why VIKO: 2-column story + 3 stat blocks visible, scroll reveal works
+- [x] Features: 4×2 grid, icons colored (cyan/amber/green), hover effect works
+- [x] Screenshots: 3 images fully visible (dashboard, text-chat, voice-chat)
+- [x] GitHub CTA: tech pills visible, GitHub button links correctly
+- [x] Footer: email visible, copyright text visible
 
-- [ ] **Step 2: Check all links**
+- [x] **Step 2: Check all links**
 
 ```bash
 grep -o 'href="[^"]*"' index.html
@@ -999,21 +999,21 @@ grep -o 'href="[^"]*"' index.html
 
 Verify: no broken anchors, all GitHub URLs contain `https://`, email uses `mailto:`.
 
-- [ ] **Step 3: Add `.nojekyll` file** (prevents GitHub Pages from processing with Jekyll)
+- [x] **Step 3: Add `.nojekyll` file** (prevents GitHub Pages from processing with Jekyll)
 
 ```bash
 touch .nojekyll
 git add .nojekyll
 ```
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git add .nojekyll
 git commit -m "feat: complete VIKO landing page"
 ```
 
-- [ ] **Step 5: Enable GitHub Pages**
+- [x] **Step 5: Enable GitHub Pages**
 
 In the GitHub repo settings:
 - Settings → Pages → Source → Deploy from branch → `main` → `/ (root)`

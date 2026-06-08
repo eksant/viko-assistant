@@ -1,6 +1,6 @@
 # VIKO SelfEngineer Pipeline Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build a pipeline that lets VIKO modify its own Python source code via voice commands — adding skills, fixing bugs, updating its prompt, or restoring backups — with a plan-confirm-test-restart flow.
 
@@ -41,21 +41,21 @@
 - Create: `tests/self_engineer/__init__.py`
 - Modify: `.gitignore`
 
-- [ ] **Step 1: Create the package marker**
+- [x] **Step 1: Create the package marker**
 
 ```python
 # viko/self_engineer/__init__.py
 # SelfEngineer pipeline — see docs/superpowers/specs/2026-06-07-viko-self-engineer-design.md
 ```
 
-- [ ] **Step 2: Create test package markers**
+- [x] **Step 2: Create test package markers**
 
 ```bash
 mkdir -p tests/self_engineer
 touch tests/__init__.py tests/self_engineer/__init__.py
 ```
 
-- [ ] **Step 3: Add backups dir to .gitignore**
+- [x] **Step 3: Add backups dir to .gitignore**
 
 Open `.gitignore` and append:
 ```
@@ -63,7 +63,7 @@ Open `.gitignore` and append:
 viko/self_engineer/backups/
 ```
 
-- [ ] **Step 4: Verify structure**
+- [x] **Step 4: Verify structure**
 
 ```bash
 ls viko/self_engineer/
@@ -72,7 +72,7 @@ ls tests/self_engineer/
 # Expected: __init__.py
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko/self_engineer/__init__.py tests/__init__.py tests/self_engineer/__init__.py .gitignore
@@ -87,7 +87,7 @@ git commit -m "feat: scaffold viko self_engineer module and test package"
 - Create: `viko/self_engineer/backup.py`
 - Create: `tests/self_engineer/test_backup.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # tests/self_engineer/test_backup.py
@@ -163,7 +163,7 @@ def test_restore_deletes_created_files(tmp_viko):
     assert not new_file.exists()
 ```
 
-- [ ] **Step 2: Run tests to see them fail**
+- [x] **Step 2: Run tests to see them fail**
 
 ```bash
 cd /Users/eksa/Projects/viko-assistant
@@ -171,7 +171,7 @@ python -m pytest tests/self_engineer/test_backup.py -v 2>&1 | head -30
 ```
 Expected: ImportError or ModuleNotFoundError (backup.py doesn't exist yet)
 
-- [ ] **Step 3: Implement backup.py**
+- [x] **Step 3: Implement backup.py**
 
 ```python
 # viko/self_engineer/backup.py
@@ -274,14 +274,14 @@ def list_history() -> list[dict]:
     return _load_manifest()
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 python -m pytest tests/self_engineer/test_backup.py -v
 ```
 Expected: 5 tests PASSED
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko/self_engineer/backup.py tests/self_engineer/test_backup.py
@@ -296,7 +296,7 @@ git commit -m "feat: implement SelfEngineer backup module with manifest and rest
 - Create: `viko/self_engineer/tester.py`
 - Create: `tests/self_engineer/test_tester.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # tests/self_engineer/test_tester.py
@@ -357,14 +357,14 @@ def test_run_fails_on_syntax_error(tmp_path, monkeypatch):
     assert "SyntaxError" in result.message or "syntax" in result.message.lower()
 ```
 
-- [ ] **Step 2: Run tests to see them fail**
+- [x] **Step 2: Run tests to see them fail**
 
 ```bash
 python -m pytest tests/self_engineer/test_tester.py -v 2>&1 | head -30
 ```
 Expected: ImportError (tester.py doesn't exist yet)
 
-- [ ] **Step 3: Implement tester.py**
+- [x] **Step 3: Implement tester.py**
 
 ```python
 # viko/self_engineer/tester.py
@@ -471,14 +471,14 @@ def run(plan: dict, changes: list[dict]) -> TestResult:
     return TestResult(True, f"Semua test lolos ({n} check{'s' if n != 1 else ''})")
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 python -m pytest tests/self_engineer/test_tester.py -v -k "not test_run_pass"
 ```
 Expected: 4+ tests PASSED (skip the incomplete test_run_pass_on_valid_change)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko/self_engineer/tester.py tests/self_engineer/test_tester.py
@@ -492,7 +492,7 @@ git commit -m "feat: implement SelfEngineer tester with syntax, import and core 
 **Files:**
 - Create: `viko/self_engineer/analyzer.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # append to tests/self_engineer/test_backup.py  (or new file tests/self_engineer/test_analyzer.py)
@@ -532,14 +532,14 @@ def test_build_context_returns_dict(tmp_path, monkeypatch):
     assert ctx["action"] == "create_skill"
 ```
 
-- [ ] **Step 2: Run tests to see them fail**
+- [x] **Step 2: Run tests to see them fail**
 
 ```bash
 python -m pytest tests/self_engineer/test_analyzer.py -v 2>&1 | head -20
 ```
 Expected: ImportError
 
-- [ ] **Step 3: Implement analyzer.py**
+- [x] **Step 3: Implement analyzer.py**
 
 ```python
 # viko/self_engineer/analyzer.py
@@ -657,14 +657,14 @@ def build_context(intent: str, target_files: list[str] | None = None, action: st
     }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 python -m pytest tests/self_engineer/test_analyzer.py -v
 ```
 Expected: All PASSED
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko/self_engineer/analyzer.py tests/self_engineer/test_analyzer.py
@@ -680,7 +680,7 @@ git commit -m "feat: implement SelfEngineer analyzer with intent categorization 
 
 (No unit test — calls Gemini API. Tested via smoke test when running VIKO.)
 
-- [ ] **Step 1: Implement planner.py**
+- [x] **Step 1: Implement planner.py**
 
 ```python
 # viko/self_engineer/planner.py
@@ -767,14 +767,14 @@ JSON:"""
             raise ValueError(f"Planner returned invalid JSON after 2 attempts. Raw: {raw[:200]}")
 ```
 
-- [ ] **Step 2: Verify import works**
+- [x] **Step 2: Verify import works**
 
 ```bash
 python -c "from viko.self_engineer import planner; print('OK')"
 ```
 Expected: `OK`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/self_engineer/planner.py
@@ -789,7 +789,7 @@ git commit -m "feat: implement SelfEngineer planner (Gemini-based structured pla
 - Create: `viko/self_engineer/generator.py`
 - Create: `tests/self_engineer/test_generator_apply.py`
 
-- [ ] **Step 1: Write failing test for apply_changes (pure function)**
+- [x] **Step 1: Write failing test for apply_changes (pure function)**
 
 ```python
 # tests/self_engineer/test_generator_apply.py
@@ -837,14 +837,14 @@ def test_apply_patch_miss_reported(tmp_path, monkeypatch):
     assert any("PATCH MISS" in a for a in applied)
 ```
 
-- [ ] **Step 2: Run tests to see them fail**
+- [x] **Step 2: Run tests to see them fail**
 
 ```bash
 python -m pytest tests/self_engineer/test_generator_apply.py -v 2>&1 | head -20
 ```
 Expected: ImportError
 
-- [ ] **Step 3: Implement generator.py**
+- [x] **Step 3: Implement generator.py**
 
 ```python
 # viko/self_engineer/generator.py
@@ -1023,14 +1023,14 @@ def apply_changes(changes: list[dict]) -> list[str]:
     return log
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 python -m pytest tests/self_engineer/test_generator_apply.py -v
 ```
 Expected: All PASSED
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko/self_engineer/generator.py tests/self_engineer/test_generator_apply.py
@@ -1044,7 +1044,7 @@ git commit -m "feat: implement SelfEngineer generator with create/patch/overwrit
 **Files:**
 - Create: `viko/self_engineer/restarter.py`
 
-- [ ] **Step 1: Implement restarter.py**
+- [x] **Step 1: Implement restarter.py**
 
 ```python
 # viko/self_engineer/restarter.py
@@ -1101,14 +1101,14 @@ def restart(speak_fn=None):
     threading.Thread(target=_do_restart, daemon=True).start()
 ```
 
-- [ ] **Step 2: Verify import**
+- [x] **Step 2: Verify import**
 
 ```bash
 python -c "from viko.self_engineer import restarter; print('OK')"
 ```
 Expected: `OK`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/self_engineer/restarter.py
@@ -1123,7 +1123,7 @@ git commit -m "feat: implement SelfEngineer restarter with os.execv and flag-bas
 - Create: `viko/self_engineer/engine.py`
 - Create: `tests/self_engineer/test_engine_state.py`
 
-- [ ] **Step 1: Write failing tests for state persistence**
+- [x] **Step 1: Write failing tests for state persistence**
 
 ```python
 # tests/self_engineer/test_engine_state.py
@@ -1186,14 +1186,14 @@ def test_clear_pending_restart(tmp_engine):
     assert changes is None
 ```
 
-- [ ] **Step 2: Run tests to see them fail**
+- [x] **Step 2: Run tests to see them fail**
 
 ```bash
 python -m pytest tests/self_engineer/test_engine_state.py -v 2>&1 | head -20
 ```
 Expected: ImportError
 
-- [ ] **Step 3: Implement engine.py**
+- [x] **Step 3: Implement engine.py**
 
 ```python
 # viko/self_engineer/engine.py
@@ -1368,14 +1368,14 @@ def run(intent: str, action: str, target_files: list[str] | None = None, speak=N
     return _engine.run(intent=intent, action=action, target_files=target_files, speak=speak)
 ```
 
-- [ ] **Step 4: Run state persistence tests**
+- [x] **Step 4: Run state persistence tests**
 
 ```bash
 python -m pytest tests/self_engineer/test_engine_state.py -v
 ```
 Expected: All PASSED
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko/self_engineer/engine.py tests/self_engineer/test_engine_state.py
@@ -1389,7 +1389,7 @@ git commit -m "feat: implement SelfEngineer engine — state machine with plan/r
 **Files:**
 - Create: `viko/skills/self_update.py`
 
-- [ ] **Step 1: Implement the skill**
+- [x] **Step 1: Implement the skill**
 
 ```python
 # viko/skills/self_update.py
@@ -1405,14 +1405,14 @@ def self_update(parameters: dict, player=None, speak=None) -> str:
     return run(intent=intent, action=action, target_files=target_files, speak=speak)
 ```
 
-- [ ] **Step 2: Verify import**
+- [x] **Step 2: Verify import**
 
 ```bash
 python -c "from viko.skills.self_update import self_update; print('OK')"
 ```
 Expected: `OK`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/skills/self_update.py
@@ -1426,7 +1426,7 @@ git commit -m "feat: add self_update voice skill wrapping SelfEngineer engine"
 **Files:**
 - Modify: `viko.py` (3 locations: import, TOOL_DECLARATIONS, _execute_tool)
 
-- [ ] **Step 1: Add import**
+- [x] **Step 1: Add import**
 
 In `viko.py`, find this block (around line 43-47):
 
@@ -1444,7 +1444,7 @@ Add after it:
 from viko.skills.self_update import self_update
 ```
 
-- [ ] **Step 2: Add TOOL_DECLARATIONS entry**
+- [x] **Step 2: Add TOOL_DECLARATIONS entry**
 
 In `viko.py`, find the `dev_agent` entry in `TOOL_DECLARATIONS` (around line 305-318):
 
@@ -1488,7 +1488,7 @@ Add this entry BEFORE it (after the `code_helper` entry closing brace `},`):
     },
 ```
 
-- [ ] **Step 3: Add _execute_tool handler**
+- [x] **Step 3: Add _execute_tool handler**
 
 In `viko.py`, find this block in `_execute_tool` (around line 859-862):
 
@@ -1506,14 +1506,14 @@ Add after it:
                 result = r or "Done."
 ```
 
-- [ ] **Step 4: Verify import is clean**
+- [x] **Step 4: Verify import is clean**
 
 ```bash
 python -c "import viko; print('OK')"
 ```
 Expected: `OK` (may take a moment — imports PyQt6)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko.py
@@ -1529,7 +1529,7 @@ When VIKO restarts after a self-update, it should announce the update to the use
 **Files:**
 - Modify: `viko.py` (startup check in `run()` method)
 
-- [ ] **Step 1: Add restart check in run()**
+- [x] **Step 1: Add restart check in run()**
 
 In `viko.py`, find this block in the `run()` method (around line 1119-1125):
 
@@ -1571,7 +1571,7 @@ Replace with:
                         print(f"[SelfEngineer] Restart check failed: {_re}")
 ```
 
-- [ ] **Step 2: Verify VIKO still launches without errors**
+- [x] **Step 2: Verify VIKO still launches without errors**
 
 ```bash
 python -c "
@@ -1583,7 +1583,7 @@ print(f'Flag check OK: {msg}')
 ```
 Expected: `Flag check OK: None`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko.py
@@ -1599,13 +1599,13 @@ Add routing rules to `viko/prompt.txt` so Gemini knows when to use `self_update`
 **Files:**
 - Modify: `viko/prompt.txt`
 
-- [ ] **Step 1: Read the current prompt end**
+- [x] **Step 1: Read the current prompt end**
 
 ```bash
 tail -30 viko/prompt.txt
 ```
 
-- [ ] **Step 2: Append self_update routing rules**
+- [x] **Step 2: Append self_update routing rules**
 
 Open `viko/prompt.txt` and append at the end:
 
@@ -1629,13 +1629,13 @@ If user says "tidak", "batal", "jangan" → call self_update with action=cancel
 Always include the full user intent in the intent parameter.
 ```
 
-- [ ] **Step 3: Verify file was updated**
+- [x] **Step 3: Verify file was updated**
 
 ```bash
 tail -20 viko/prompt.txt
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add viko/prompt.txt
@@ -1648,14 +1648,14 @@ git commit -m "feat: add self_update routing rules to VIKO system prompt"
 
 Verify the entire pipeline works end-to-end (without actually running VIKO).
 
-- [ ] **Step 1: Run all unit tests**
+- [x] **Step 1: Run all unit tests**
 
 ```bash
 python -m pytest tests/self_engineer/ -v
 ```
 Expected: All tests PASS (12+ tests)
 
-- [ ] **Step 2: Verify all modules import cleanly**
+- [x] **Step 2: Verify all modules import cleanly**
 
 ```bash
 python -c "
@@ -1666,7 +1666,7 @@ print('All modules import OK')
 ```
 Expected: `All modules import OK`
 
-- [ ] **Step 3: Smoke test the analyze → plan display (no API call)**
+- [x] **Step 3: Smoke test the analyze → plan display (no API call)**
 
 ```bash
 python -c "
@@ -1679,7 +1679,7 @@ print('Token estimate:', ctx['token_estimate'])
 ```
 Expected: `Action: create_skill`, files list includes skill templates, token count reasonable
 
-- [ ] **Step 4: Smoke test backup save + restore**
+- [x] **Step 4: Smoke test backup save + restore**
 
 ```bash
 python -c "
@@ -1692,7 +1692,7 @@ print('History entries:', len(list_history()))
 "
 ```
 
-- [ ] **Step 5: Final commit**
+- [x] **Step 5: Final commit**
 
 ```bash
 git add .

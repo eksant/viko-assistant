@@ -1024,6 +1024,25 @@ class VikoLive:
         }
         self.ui.set_state(_TOOL_STATE.get(name, "THINKING"))
 
+        # Visible activity cue in the log (fills the gap left by removing the
+        # spoken "tunggu sebentar" preamble). Skip purely-internal tools.
+        _ACT_LABEL = {
+            "web_search":       "🔍 Mencari di internet…",
+            "weather_report":   "🌦️ Cek cuaca…",
+            "navigate_browser": "🌐 Membuka halaman…",
+            "browser_interact": "🖱️ Mengoperasikan halaman…",
+            "get_page_content": "📄 Membaca halaman…",
+            "screen_process":   "👁️ Menganalisa layar…",
+            "youtube_video":    "▶️ Membuka YouTube…",
+            "send_message":     "✉️ Mengirim pesan…",
+            "flight_finder":    "✈️ Mencari penerbangan…",
+            "agent_task":       "🛠️ Mengerjakan tugas…",
+            "code_helper":      "💻 Menulis kode…",
+            "dev_agent":        "💻 Dev agent bekerja…",
+        }
+        if name not in ("save_memory", "shutdown_viko"):
+            self.ui.write_log(f"SYS: {_ACT_LABEL.get(name, f'⚙️ {name}…')}")
+
         if name == "save_memory":
             category = args.get("category", "notes")
             key      = args.get("key", "")

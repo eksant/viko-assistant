@@ -1,6 +1,6 @@
 # VIKO Embedded Browser + AI Workspace Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Embed a fully interactive Chromium browser inside the VIKO window (replacing center HUD when active), with AI tools to render generated files, control the browser, and integrate agent-browser for AI-visual interaction.
 
@@ -34,7 +34,7 @@
 - Create: `workspace/code/.gitkeep`
 - Create: `viko/workspace.py`
 
-- [ ] **Step 1: Create workspace folder structure**
+- [x] **Step 1: Create workspace folder structure**
 
 ```bash
 mkdir -p /Users/eksa/Projects/viko-assistant/workspace/wireframes
@@ -44,7 +44,7 @@ mkdir -p /Users/eksa/Projects/viko-assistant/workspace/code
 touch workspace/wireframes/.gitkeep workspace/presentations/.gitkeep workspace/documents/.gitkeep workspace/code/.gitkeep
 ```
 
-- [ ] **Step 2: Create viko/workspace.py**
+- [x] **Step 2: Create viko/workspace.py**
 
 ```python
 # viko/workspace.py
@@ -194,7 +194,7 @@ def presentation_template(title: str, slides: list[dict]) -> str:
 </html>"""
 ```
 
-- [ ] **Step 3: Smoke-test workspace.py**
+- [x] **Step 3: Smoke-test workspace.py**
 
 ```bash
 .venv/bin/python -c "
@@ -212,7 +212,7 @@ print('Presentation:', p3)
 
 Expected: prints 3 paths under `workspace/`, no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add workspace/ viko/workspace.py
@@ -227,14 +227,14 @@ git commit -m "feat: add workspace folder + template helpers"
 - Modify: `requirements.txt`
 - Install in venv
 
-- [ ] **Step 1: Add to requirements.txt**
+- [x] **Step 1: Add to requirements.txt**
 
 Open `requirements.txt` and add after `PyQt6`:
 ```
 PyQt6-WebEngine
 ```
 
-- [ ] **Step 2: Install**
+- [x] **Step 2: Install**
 
 ```bash
 .venv/bin/pip install PyQt6-WebEngine
@@ -242,7 +242,7 @@ PyQt6-WebEngine
 
 Expected: resolves and installs `PyQt6-WebEngine` and `PyQt6-WebEngine-Qt6`.
 
-- [ ] **Step 3: Verify import**
+- [x] **Step 3: Verify import**
 
 ```bash
 .venv/bin/python -c "from PyQt6.QtWebEngineWidgets import QWebEngineView; print('QWebEngineView OK')"
@@ -250,7 +250,7 @@ Expected: resolves and installs `PyQt6-WebEngine` and `PyQt6-WebEngine-Qt6`.
 
 Expected: `QWebEngineView OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add requirements.txt
@@ -271,7 +271,7 @@ The panel has three layers stacked vertically:
 
 Set CDP remote debugging port via env var **before** QApplication is created (done in `viko/ui.py`, Task 5).
 
-- [ ] **Step 1: Create viko/browser_panel.py**
+- [x] **Step 1: Create viko/browser_panel.py**
 
 ```python
 # viko/browser_panel.py
@@ -463,7 +463,7 @@ class BrowserPanel(QWidget):
             self._mode_badge.setStyleSheet(f"color: {PRI.name()}; background: rgba(0,212,255,15); border-radius: 3px; padding: 2px;")
 ```
 
-- [ ] **Step 2: Verify import (no display)**
+- [x] **Step 2: Verify import (no display)**
 
 ```bash
 .venv/bin/python -c "
@@ -475,7 +475,7 @@ print('BrowserPanel OK, CDP port:', CDP_PORT)
 
 Expected: `BrowserPanel OK, CDP port: 9222`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/browser_panel.py
@@ -491,7 +491,7 @@ git commit -m "feat: add BrowserPanel widget with QWebEngineView + DevTools"
 
 agent-browser runs as an npx subprocess. It exposes an HTTP server that accepts POST /screenshot and POST /action requests. The package is `@vercel-labs/agent-browser`.
 
-- [ ] **Step 1: Create viko/agent_browser.py**
+- [x] **Step 1: Create viko/agent_browser.py**
 
 ```python
 # viko/agent_browser.py
@@ -606,7 +606,7 @@ def get_server(port: int = _DEFAULT_PORT, cdp_url: str = "http://localhost:9222"
     return _server
 ```
 
-- [ ] **Step 2: Lint check**
+- [x] **Step 2: Lint check**
 
 ```bash
 .venv/bin/python -m pyflakes viko/agent_browser.py
@@ -614,7 +614,7 @@ def get_server(port: int = _DEFAULT_PORT, cdp_url: str = "http://localhost:9222"
 
 Expected: no output (clean).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/agent_browser.py
@@ -630,7 +630,7 @@ git commit -m "feat: add agent-browser Node.js subprocess wrapper"
 
 This skill provides the 4 AI-facing tools. It talks to the BrowserPanel via a shared reference stored in a module-level `_player` variable (same pattern as other skills using `player` arg).
 
-- [ ] **Step 1: Create viko/skills/browser_tool.py**
+- [x] **Step 1: Create viko/skills/browser_tool.py**
 
 ```python
 # viko/skills/browser_tool.py
@@ -764,7 +764,7 @@ def get_page_content(parameters: dict, player=None) -> str:
     return text[:8000] if text else "(empty page)"
 ```
 
-- [ ] **Step 2: Lint check**
+- [x] **Step 2: Lint check**
 
 ```bash
 .venv/bin/python -m pyflakes viko/skills/browser_tool.py
@@ -772,7 +772,7 @@ def get_page_content(parameters: dict, player=None) -> str:
 
 Expected: no output (clean).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/skills/browser_tool.py
@@ -795,7 +795,7 @@ Changes:
 6. Expose `set_browser_url()`, `toggle_browser()` in VikoUI facade
 7. Store `_browser` ref for browser_tool skill
 
-- [ ] **Step 1: Add CDP env var + BrowserPanel import**
+- [x] **Step 1: Add CDP env var + BrowserPanel import**
 
 In `viko/ui.py`, at the very top (after `from __future__ import annotations`, before other imports):
 
@@ -810,7 +810,7 @@ Then add to the existing widget import block:
 from viko.browser_panel import BrowserPanel
 ```
 
-- [ ] **Step 2: Replace center HudCanvas with QStackedWidget**
+- [x] **Step 2: Replace center HudCanvas with QStackedWidget**
 
 Find this block in `_build()` (around line 167):
 ```python
@@ -830,7 +830,7 @@ blay.addWidget(self._center_stack, 1)
 self._browser.page_loaded.connect(self._on_page_loaded)
 ```
 
-- [ ] **Step 3: Add 🌐 button to button bar**
+- [x] **Step 3: Add 🌐 button to button bar**
 
 In `_build()`, find the block that adds `self._rst_btn` then `self._pause_btn`. Insert the browser button between them:
 
@@ -847,7 +847,7 @@ bbl.addWidget(self._browser_btn)
 
 Add this after `bbl.addWidget(self._rst_btn)` and before `bbl.addWidget(self._pause_btn)`.
 
-- [ ] **Step 4: Add _toggle_browser and _on_page_loaded methods**
+- [x] **Step 4: Add _toggle_browser and _on_page_loaded methods**
 
 In `MainWindow`, add after `_toggle_fullscreen`:
 ```python
@@ -870,7 +870,7 @@ def set_browser_visible(self, visible: bool):
     self._toggle_browser(visible)
 ```
 
-- [ ] **Step 5: Expose in VikoUI facade**
+- [x] **Step 5: Expose in VikoUI facade**
 
 In the `VikoUI` class, add:
 ```python
@@ -878,7 +878,7 @@ def set_browser_url(self, url: str): self._win.set_browser_url(url)
 def toggle_browser(self, visible: bool | None = None): self._win._toggle_browser(visible)
 ```
 
-- [ ] **Step 6: Lint check**
+- [x] **Step 6: Lint check**
 
 ```bash
 .venv/bin/python -m pyflakes viko/ui.py
@@ -886,7 +886,7 @@ def toggle_browser(self, visible: bool | None = None): self._win._toggle_browser
 
 Expected: no output.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add viko/ui.py
@@ -902,7 +902,7 @@ git commit -m "feat: embed BrowserPanel in center QStackedWidget, add browser to
 
 Add 4 new tool declarations and 4 new elif branches in `_execute_tool()`.
 
-- [ ] **Step 1: Add imports**
+- [x] **Step 1: Add imports**
 
 In `viko.py` imports section, add:
 ```python
@@ -912,7 +912,7 @@ from viko.skills.browser_tool import (
 )
 ```
 
-- [ ] **Step 2: Add tool declarations**
+- [x] **Step 2: Add tool declarations**
 
 In `TOOL_DECLARATIONS` list, append before the closing `]`:
 
@@ -961,7 +961,7 @@ In `TOOL_DECLARATIONS` list, append before the closing `]`:
 },
 ```
 
-- [ ] **Step 3: Add handlers in _execute_tool()**
+- [x] **Step 3: Add handlers in _execute_tool()**
 
 In `_execute_tool()`, add before the `else: result = f"Unknown tool: {name}"` branch:
 
@@ -983,7 +983,7 @@ elif name == "get_page_content":
     result = r or "(empty)"
 ```
 
-- [ ] **Step 4: Update system prompt to tell Viko about browser tools**
+- [x] **Step 4: Update system prompt to tell Viko about browser tools**
 
 In `viko/prompt.txt`, add to the TOOL SELECTION section:
 ```
@@ -993,7 +993,7 @@ In `viko/prompt.txt`, add to the TOOL SELECTION section:
 - get_page_content → baca teks halaman browser untuk analisis
 ```
 
-- [ ] **Step 5: Lint check**
+- [x] **Step 5: Lint check**
 
 ```bash
 .venv/bin/python -m pyflakes viko.py
@@ -1001,7 +1001,7 @@ In `viko/prompt.txt`, add to the TOOL SELECTION section:
 
 Expected: no output.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add viko.py viko/prompt.txt
@@ -1012,14 +1012,14 @@ git commit -m "feat: add navigate_browser/render_content/screenshot/page_content
 
 ## Task 8: End-to-end test + restart
 
-- [ ] **Step 1: Install PyQt6-WebEngine if not done**
+- [x] **Step 1: Install PyQt6-WebEngine if not done**
 
 ```bash
 .venv/bin/pip install PyQt6-WebEngine
 .venv/bin/python -c "from PyQt6.QtWebEngineWidgets import QWebEngineView; print('OK')"
 ```
 
-- [ ] **Step 2: Full lint check**
+- [x] **Step 2: Full lint check**
 
 ```bash
 .venv/bin/python -m pyflakes viko/workspace.py viko/browser_panel.py viko/agent_browser.py viko/skills/browser_tool.py viko/ui.py viko.py
@@ -1027,7 +1027,7 @@ git commit -m "feat: add navigate_browser/render_content/screenshot/page_content
 
 Expected: no output.
 
-- [ ] **Step 3: Restart app**
+- [x] **Step 3: Restart app**
 
 ```bash
 pkill -f "python.*viko.py"; sleep 0.5 && .venv/bin/python viko.py &
@@ -1036,27 +1036,27 @@ sleep 4 && ps aux | grep "viko.py" | grep -v grep
 
 Expected: process running.
 
-- [ ] **Step 4: Manual test — browser toggle**
+- [x] **Step 4: Manual test — browser toggle**
 
 Click 🌐 button in VIKO button bar.
 Expected: center area switches from HUD to browser panel with URL bar.
 
-- [ ] **Step 5: Manual test — navigate**
+- [x] **Step 5: Manual test — navigate**
 
 Say "viko, buka github.com di browser"
 Expected: VIKO calls `navigate_browser`, browser panel shows github.com, badge shows "WEB".
 
-- [ ] **Step 6: Manual test — render wireframe**
+- [x] **Step 6: Manual test — render wireframe**
 
 Say "viko, buat wireframe halaman login dengan field email, password, dan tombol login"
 Expected: VIKO calls `render_content`, saves `wireframes/login-wireframe.html`, browser opens it, badge shows "LOCAL".
 
-- [ ] **Step 7: Manual test — DevTools**
+- [x] **Step 7: Manual test — DevTools**
 
 Click ⚙ button in browser URL bar.
 Expected: DevTools panel appears in split below the page.
 
-- [ ] **Step 8: Final commit**
+- [x] **Step 8: Final commit**
 
 ```bash
 git add -A

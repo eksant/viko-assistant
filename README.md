@@ -17,12 +17,13 @@ VIKO is a personal AI voice assistant built with PyQt6 and Google Gemini Live AP
 
 ## Features
 
-- **Real-time voice conversation** — powered by Gemini Live API (native audio streaming)
-- **Futuristic HUD** — sci-fi dark UI with live system metrics, clock, and animated vector map
+- **Real-time voice conversation** — Gemini 3.1 Live API with Silero VAD for accurate speech detection and low-latency responses
+- **Configurable female Indonesian voice** — Erinome by default; 10+ voices selectable via `VIKO_VOICE` env var
+- **Futuristic HUD** — sci-fi dark UI with live system metrics, clock, animated vector map, and timestamped activity log
 - **Live location & map** — GPS via macOS CoreLocation with Nominatim reverse geocoding; falls back to IP geolocation
 - **Embedded browser** — built-in Chromium browser panel with full AI control via CDP
 - **20+ skills** — web search, file management, app control, code generation, weather, flight lookup, reminders, and more
-- **Speaker verification** — voice profile enrollment and verification via resemblyzer embeddings
+- **Speaker verification** — voice profile enrollment and verification via resemblyzer embeddings (owner-only responses)
 - **Self-modification** — VIKO can add new skills, fix bugs, update its own prompt, or modify its UI via voice command
 - **Long-term memory** — vector memory and conversation history (SQLite + ChromaDB + Gemini embeddings)
 - **Dev agent** — builds complete projects from a voice description (plan → code → test → commit)
@@ -57,17 +58,18 @@ cp .env.example .env   # fill in your API keys
 
 ### Environment Variables
 
+See [`.env.example`](.env.example) for the full reference with all voice options.
+
 ```env
 GEMINI_API_KEY=your_gemini_api_key        # required
 ANTHROPIC_API_KEY=your_anthropic_key      # optional — Claude for code gen
-OPENROUTER_API_KEY=your_openrouter_key    # optional — alternative LLM routing
-OS_SYSTEM=mac                             # mac | windows
+OPENROUTER_API_KEY=your_openrouter_key    # optional
+OS_SYSTEM=mac                             # mac | windows | linux
 CAMERA_INDEX=0                            # webcam index
 OWNER_PASSPHRASE=...                      # optional — typed bypass for speaker verification
-
-# Optional: fixed coordinates override for map marker
-# Use when CoreLocation permission is not granted
-LATITUDE=-6.2088
+VIKO_VOICE=Erinome                        # TTS voice name (default: Aoede)
+VIKO_VOICE_LANG=id-ID                     # BCP-47 language for TTS (default: id-ID)
+LATITUDE=-6.2088                          # optional — fixed coords for map/weather
 LONGITUDE=106.8456
 ```
 
@@ -176,14 +178,17 @@ Automatic rollback on test failure.
 ## Development
 
 ```bash
-# Run all tests
+# Run all tests (59 total)
 python -m pytest tests/ -v
 
 # Self-engineer tests only
 python -m pytest tests/self_engineer/ -v
 
-# Lint
-.venv/bin/ruff check viko/ viko.py --select F401,F811,F841
+# Core tests (VAD + wake word)
+python -m pytest tests/core/ -v
+
+# Lint (auto-fix safe issues)
+ruff check viko/ viko.py --select F401,F811,F841 --fix
 ```
 
 ### Adding a New Skill

@@ -1,6 +1,6 @@
 # Humor Mode Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a `HUMOR MODE` section to VIKO's system prompt so that absurd/random humor fires on almost every response, with explicit off-switches for emotional, critical-technical, and religious contexts.
 
@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `viko/prompt.txt` (after the KEPRIBADIAN block, before BIDANG KEAHLIAN)
 
-- [ ] **Step 1: Locate insertion point**
+- [x] **Step 1: Locate insertion point**
 
 Open `viko/prompt.txt`. Find the line that reads:
 
@@ -25,7 +25,7 @@ BIDANG KEAHLIAN:
 
 The new section goes immediately before it, with one blank line separating from the previous block.
 
-- [ ] **Step 2: Insert the section**
+- [x] **Step 2: Insert the section**
 
 Insert this block immediately before `BIDANG KEAHLIAN:`:
 
@@ -49,7 +49,7 @@ HUMOR OFF (wajib serius):
 
 ```
 
-- [ ] **Step 3: Verify placement**
+- [x] **Step 3: Verify placement**
 
 Run:
 ```bash
@@ -65,7 +65,7 @@ M+N:BIDANG KEAHLIAN:
 
 `HUMOR MODE` must appear between `KEPRIBADIAN` and `BIDANG KEAHLIAN`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add viko/prompt.txt
@@ -78,13 +78,13 @@ git commit -m "feat: add absurd humor mode to VIKO personality"
 
 **Files:** None (runtime verification only)
 
-- [ ] **Step 1: Kill running VIKO process**
+- [x] **Step 1: Kill running VIKO process**
 
 ```bash
 pkill -f "python viko.py"
 ```
 
-- [ ] **Step 2: Start VIKO**
+- [x] **Step 2: Start VIKO**
 
 ```bash
 nohup .venv/bin/python viko.py > /tmp/viko.log 2>&1 &
@@ -93,10 +93,10 @@ sleep 5 && tail -5 /tmp/viko.log
 
 Expected: process starts, DevTools line appears, no import errors.
 
-- [ ] **Step 3: Manual smoke test**
+- [x] **Step 3: Manual smoke test**
 
 Say or type a neutral, everyday question to VIKO (e.g. "apa kabar?" or "jam berapa sekarang?"). Verify the response includes at least one absurd/random analogy or non-sequitur touch — not just a plain factual reply.
 
-- [ ] **Step 4: Verify HUMOR OFF**
+- [x] **Step 4: Verify HUMOR OFF**
 
 Say something emotional (e.g. "lagi stress nih"). Verify VIKO responds with empathy first — no absurd humor.

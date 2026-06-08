@@ -1,7 +1,10 @@
 # viko/ui.py
 from __future__ import annotations
 import os as _os
-import sys, time, threading, socket
+import sys
+import time
+import threading
+import socket
 import queue as _queue
 
 # Must be set before QApplication / QWebEngine initialises
@@ -60,7 +63,8 @@ class _SysMetrics:
                 self._data["cpu"]  = psutil.cpu_percent(interval=1) / 100
                 self._data["mem"]  = psutil.virtual_memory().percent / 100
                 try:
-                    import platform as _pl, os as _os
+                    import platform as _pl
+                    import os as _os
                     _dp = "/System/Volumes/Data" if _pl.system() == "Darwin" and _os.path.exists("/System/Volumes/Data") else "/"
                     self._data["disk"] = psutil.disk_usage(_dp).percent / 100
                 except Exception:
@@ -782,7 +786,8 @@ class MainWindow(QMainWindow):
 
     def _fetch_country_from_gps(self, lat: float, lon: float):
         try:
-            import urllib.request, json as _json
+            import urllib.request
+            import json as _json
             url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json"
             req = urllib.request.Request(url, headers={"User-Agent": "VIKO/1.0"})
             with urllib.request.urlopen(req, timeout=8) as r:
@@ -814,7 +819,8 @@ class MainWindow(QMainWindow):
 
     def _fetch_location(self):
         try:
-            import urllib.request, json as _json
+            import urllib.request
+            import json as _json
             with urllib.request.urlopen("http://ip-api.com/json/", timeout=6) as r:
                 d = _json.loads(r.read())
             lat  = float(d.get("lat", 3.14))
@@ -836,7 +842,8 @@ class MainWindow(QMainWindow):
             pass
 
     def _fetch_country_polys(self, cc2: str) -> list:
-        import urllib.request, json as _json
+        import urllib.request
+        import json as _json
         from pathlib import Path
         cc3 = self._A2_TO_A3.get(cc2)
         if not cc3:
@@ -916,7 +923,8 @@ def _make_app_icon() -> QIcon:
 def _set_macos_app_icon(qt_icon: QIcon) -> None:
     """Push the Qt icon to NSApplication so dock and title bar use the same image."""
     try:
-        import tempfile, os as _os
+        import tempfile
+        import os as _os
         from AppKit import NSApplication, NSImage
         px = qt_icon.pixmap(256, 256)
         tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)

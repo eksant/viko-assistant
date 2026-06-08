@@ -1,6 +1,6 @@
 # JARVIS HUD Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace `viko/ui.py` with the JARVIS Modern HUD design from `design_preview.py`, keeping the `VikoUI` public interface identical so `viko.py` requires zero changes.
 
@@ -51,7 +51,7 @@ class VikoUI:
 **Files:**
 - Create: `viko/ui_theme.py`
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 ```python
 # viko/ui_theme.py
@@ -118,7 +118,7 @@ _WORLD_POLYS = [
 ]
 ```
 
-- [ ] **Step 2: Verify import works**
+- [x] **Step 2: Verify import works**
 
 ```bash
 cd /Users/eksa/Projects/viko-assistant
@@ -127,7 +127,7 @@ cd /Users/eksa/Projects/viko-assistant
 
 Expected: `ok 7`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/ui_theme.py
@@ -141,7 +141,7 @@ git commit -m "feat: add ui_theme.py — palette, font helper, world map polygon
 **Files:**
 - Create: `viko/ui_widgets.py`
 
-- [ ] **Step 1: Create the file with FloatingArc**
+- [x] **Step 1: Create the file with FloatingArc**
 
 ```python
 # viko/ui_widgets.py
@@ -239,7 +239,7 @@ class FloatingArc(QWidget):
         p.end()
 ```
 
-- [ ] **Step 2: Verify import**
+- [x] **Step 2: Verify import**
 
 ```bash
 .venv/bin/python -c "from viko.ui_widgets import FloatingArc; print('FloatingArc ok')"
@@ -247,7 +247,7 @@ class FloatingArc(QWidget):
 
 Expected: `FloatingArc ok`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/ui_widgets.py
@@ -261,7 +261,7 @@ git commit -m "feat: add ui_widgets.py with FloatingArc arch panel"
 **Files:**
 - Modify: `viko/ui_widgets.py`
 
-- [ ] **Step 1: Append header/footer draw functions after the FloatingArc class**
+- [x] **Step 1: Append header/footer draw functions after the FloatingArc class**
 
 ```python
 def _hdr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
@@ -327,7 +327,7 @@ def _ftr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
     p.drawText(x2 - fm2.horizontalAdvance(copy), cy + 7, copy)
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 ```bash
 .venv/bin/python -c "from viko.ui_widgets import _hdr_draw, _ftr_draw; print('draw fns ok')"
@@ -335,7 +335,7 @@ def _ftr_draw(p: QPainter, W: int, H: int, tick: int, state: dict = {}):
 
 Expected: `draw fns ok`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/ui_widgets.py
@@ -349,7 +349,7 @@ git commit -m "feat: add header/footer draw functions to ui_widgets"
 **Files:**
 - Modify: `viko/ui_widgets.py`
 
-- [ ] **Step 1: Append the three card widget classes**
+- [x] **Step 1: Append the three card widget classes**
 
 ```python
 class MetricCard(QWidget):
@@ -499,7 +499,7 @@ class WorldMapWidget(QWidget):
         p.end()
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 ```bash
 .venv/bin/python -c "from viko.ui_widgets import MetricCard, SystemStatusCard, WorldMapWidget; print('cards ok')"
@@ -507,7 +507,7 @@ class WorldMapWidget(QWidget):
 
 Expected: `cards ok`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/ui_widgets.py
@@ -521,7 +521,7 @@ git commit -m "feat: add MetricCard, SystemStatusCard, WorldMapWidget"
 **Files:**
 - Modify: `viko/ui_widgets.py`
 
-- [ ] **Step 1: Append CommsCard and SessionCard**
+- [x] **Step 1: Append CommsCard and SessionCard**
 
 ```python
 class CommsCard(QWidget):
@@ -601,7 +601,7 @@ class SessionCard(QWidget):
         p.end()
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 ```bash
 .venv/bin/python -c "from viko.ui_widgets import CommsCard, SessionCard; print('session cards ok')"
@@ -609,7 +609,7 @@ class SessionCard(QWidget):
 
 Expected: `session cards ok`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/ui_widgets.py
@@ -623,7 +623,7 @@ git commit -m "feat: add CommsCard and SessionCard"
 **Files:**
 - Modify: `viko/ui_widgets.py`
 
-- [ ] **Step 1: Append HudCanvas (visual center piece)**
+- [x] **Step 1: Append HudCanvas (visual center piece)**
 
 ```python
 class HudCanvas(QWidget):
@@ -807,7 +807,7 @@ class HudCanvas(QWidget):
         p.end()
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 ```bash
 .venv/bin/python -c "from viko.ui_widgets import HudCanvas; print('HudCanvas ok')"
@@ -815,7 +815,7 @@ class HudCanvas(QWidget):
 
 Expected: `HudCanvas ok`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/ui_widgets.py
@@ -829,7 +829,7 @@ git commit -m "feat: add HudCanvas with rings, scanners, pulse waves, waveform, 
 **Files:**
 - Modify: `viko/ui_widgets.py`
 
-- [ ] **Step 1: Add remaining imports at top of ui_widgets.py**
+- [x] **Step 1: Add remaining imports at top of ui_widgets.py**
 
 At the very top of `viko/ui_widgets.py`, ensure these are in the imports block:
 
@@ -841,7 +841,7 @@ from PyQt6.QtWidgets import (
 )
 ```
 
-- [ ] **Step 2: Append LogWidget with typewriter animation**
+- [x] **Step 2: Append LogWidget with typewriter animation**
 
 ```python
 class LogWidget(QTextEdit):
@@ -1078,7 +1078,7 @@ class ActivityPanel(QWidget):
     def on_text_command_changed(self, cb): self._input.returnPressed.connect(lambda: cb(self._input.text()))
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 ```bash
 .venv/bin/python -c "from viko.ui_widgets import LogWidget, ActivityPanel, LeftPanel, RightMetricsPanel; print('panel widgets ok')"
@@ -1086,7 +1086,7 @@ class ActivityPanel(QWidget):
 
 Expected: `panel widgets ok`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add viko/ui_widgets.py
@@ -1100,7 +1100,7 @@ git commit -m "feat: add LogWidget, FileDropCard, ActivityPanel, LeftPanel, Righ
 **Files:**
 - Modify: `viko/ui.py` (full rewrite, backup already exists as `viko/ui_backup.py`)
 
-- [ ] **Step 1: Write the new ui.py**
+- [x] **Step 1: Write the new ui.py**
 
 ```python
 # viko/ui.py
@@ -1404,7 +1404,7 @@ class VikoUI:
         if not self.muted: self.set_state("LISTENING")
 ```
 
-- [ ] **Step 2: Verify syntax**
+- [x] **Step 2: Verify syntax**
 
 ```bash
 .venv/bin/python -c "from viko.ui import VikoUI; print('VikoUI ok')"
@@ -1412,7 +1412,7 @@ class VikoUI:
 
 Expected: `VikoUI ok`
 
-- [ ] **Step 3: Verify full app launches**
+- [x] **Step 3: Verify full app launches**
 
 ```bash
 .venv/bin/python -c "
@@ -1430,7 +1430,7 @@ print('launch ok')
 
 Expected: Window appears for 1.5 seconds then exits cleanly, prints `launch ok`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add viko/ui.py
@@ -1444,7 +1444,7 @@ git commit -m "feat: rewrite ui.py with JARVIS HUD — FloatingArc, HudCanvas, p
 **Files:**
 - Verify (no change needed): `viko.py`
 
-- [ ] **Step 1: Confirm the callback wire-up works**
+- [x] **Step 1: Confirm the callback wire-up works**
 
 In `viko.py`, the relevant lines assign `ui.on_text_command`. Since `VikoUI.on_text_command` is still a property with getter/setter, this should work with zero changes. Verify:
 
@@ -1454,7 +1454,7 @@ grep -n "on_text_command\|current_file\|write_log\|set_state\|wait_for_api" viko
 
 Expected: Lines showing `ui.on_text_command = ...`, `ui.write_log(...)`, `ui.set_state(...)`, `ui.wait_for_api_key()`
 
-- [ ] **Step 2: Run the full app**
+- [x] **Step 2: Run the full app**
 
 ```bash
 .venv/bin/python viko.py
@@ -1462,7 +1462,7 @@ Expected: Lines showing `ui.on_text_command = ...`, `ui.write_log(...)`, `ui.set
 
 Expected: JARVIS HUD window appears with SetupOverlay. After entering a valid Gemini API key, the overlay hides and the HUD switches to LISTENING state. Activity log shows "SYS: Initialised. Viko online."
 
-- [ ] **Step 3: Test state changes in UI**
+- [x] **Step 3: Test state changes in UI**
 
 Once running:
 - Speak into mic → HUD state indicator should show "LISTENING" (green)
@@ -1470,7 +1470,7 @@ Once running:
 - F4 key → mute toggle, indicator shows "MUTED" (red)
 - F11 key → fullscreen
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git add viko/ui_theme.py viko/ui_widgets.py viko/ui.py

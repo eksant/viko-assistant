@@ -53,6 +53,36 @@ Restart: kill the PID, then `nohup .venv/bin/python viko.py > /tmp/viko.log 2>&1
 3. Add entry to `TOOL_DECLARATIONS` in `viko.py`
 4. Add `elif name == "your_skill":` handler in `_execute_tool()`
 
+### Gemini Live Model (`viko.py`)
+
+```python
+LIVE_MODEL = "models/gemini-3.1-flash-live-preview"
+```
+
+The half-cascade 3.1 model is stable for tool calls (2.5 native-audio had a bug rejecting audio after `tool_call` → 1008 drops).
+
+### Voice Configuration
+
+Controlled via `.env`:
+```env
+VIKO_VOICE=Erinome          # prebuilt voice name (female, clear Indonesian)
+VIKO_VOICE_LANG=id-ID       # BCP-47 language for TTS pronunciation
+```
+
+Female voices auditioned in id-ID: Erinome (clear) · Despina (smooth/sultry) · Algieba · Achernar · Vindemiatrix · Sulafat · Aoede · Leda.
+`get_voice()` / `get_voice_language()` in `viko/core/config.py`.
+
+### Speaker Verification (`viko.py`)
+
+```python
+SV_PASS_THRESHOLD  = 0.50   # similarity ≥ this → verified owner
+SV_BLOCK_THRESHOLD = 0.40   # similarity < this → blocked non-owner
+```
+
+`WAKE_WORD_ENABLED = False` — wake-word output gate disabled (phonetic regex `_is_viko_addressed` is in the code but gating Gemini audio on input transcription is racy). Speaker verification is the sole security boundary.
+
+Re-enroll: type `viko, kenali suaraku` (no passphrase needed — physical access implies owner).
+
 ### LLM Routing (`viko/self_engineer/llm.py`)
 
 All code-generation LLM calls route through `llm.generate_text(prompt)`:
@@ -100,13 +130,19 @@ Backup is mandatory before any file change. Automatic rollback on test failure.
 
 ## Environment
 
+See `.env.example` for full reference. Key variables:
+
 ```env
 GEMINI_API_KEY=...           # required — Gemini Live voice agent
 ANTHROPIC_API_KEY=...        # optional — Claude for code generation
 OPENROUTER_API_KEY=...       # optional
-OS_SYSTEM=mac                # mac | windows
+OS_SYSTEM=mac                # mac | windows | linux
 CAMERA_INDEX=0
-OWNER_PASSPHRASE=...         # optional — typed bypass for speaker verification (empty = bypass off)
+OWNER_PASSPHRASE=...         # optional — typed bypass for speaker verification
+VIKO_VOICE=Erinome           # Gemini TTS voice (default: Aoede)
+VIKO_VOICE_LANG=id-ID        # BCP-47 TTS language (default: id-ID)
+LATITUDE=...                 # optional — fixed coords for map/weather
+LONGITUDE=...
 ```
 
 `.env` is gitignored. Never commit API keys.
@@ -128,6 +164,9 @@ OWNER_PASSPHRASE=...         # optional — typed bypass for speaker verificatio
 
 ```
 tests/
+  core/
+    test_wake_word.py       — 11 tests: phonetic wake-word detection (_is_viko_addressed)
+    test_vad_smoke.py       — 3 tests: silero-vad loads, scores silence, scores tone
   self_engineer/
     test_backup.py          — 5 tests: save, manifest, restore, delete created files
     test_tester.py          — 5 tests: syntax check, import check, run()
@@ -136,4 +175,6 @@ tests/
     test_engine_state.py    — 5 tests: pending plan/restart state persistence
 ```
 
-All 24 tests must pass before committing changes to `viko/self_engineer/`.
+Total: **59 tests**. All must pass before any commit.
+
+Run: `python -m pytest tests/ -v`

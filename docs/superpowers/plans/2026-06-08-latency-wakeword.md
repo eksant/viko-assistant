@@ -1,6 +1,6 @@
 # Latency Reduction + Wake Word ("Viko") Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Eliminate the 2-second input-gate delay, add "Viko" wake-word gating on VIKO's audio output, and halve playback latency.
 
@@ -30,14 +30,14 @@
 **Files:**
 - Modify: `requirements.txt`
 
-- [ ] **Step 1: Add dependency**
+- [x] **Step 1: Add dependency**
 
 In `requirements.txt`, add after the `resemblyzer>=0.1.1` line:
 ```
 silero-vad>=5.1
 ```
 
-- [ ] **Step 2: Install and verify**
+- [x] **Step 2: Install and verify**
 
 ```bash
 .venv/bin/pip install silero-vad
@@ -46,7 +46,7 @@ silero-vad>=5.1
 
 Expected output: `VAD loaded: <class '...'>`  — no error.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add requirements.txt
@@ -60,7 +60,7 @@ git commit -m "chore: add silero-vad dependency for VAD"
 **Files:**
 - Create: `tests/core/test_vad_smoke.py`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 ```python
 # tests/core/test_vad_smoke.py
@@ -92,7 +92,7 @@ def test_silero_vad_scores_tone():
     assert 0.0 <= prob <= 1.0
 ```
 
-- [ ] **Step 2: Run to confirm tests pass**
+- [x] **Step 2: Run to confirm tests pass**
 
 ```bash
 .venv/bin/python -m pytest tests/core/test_vad_smoke.py -v
@@ -102,7 +102,7 @@ Expected: all 3 PASS (model loads correctly).
 
 > Note: `test_silero_vad_scores_silence` asserts `prob < 0.5`. If it fails because a pure tone scores high — that's fine, only the silence check matters for production. Adjust the tone test assertion to just `0.0 <= prob <= 1.0` if needed.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/core/test_vad_smoke.py
@@ -117,7 +117,7 @@ git commit -m "test: silero VAD smoke tests"
 - Modify: `viko.py` lines 630–648 (`__init__`)
 - Modify: `viko.py` lines 1151–1192 (`_listen_audio`)
 
-- [ ] **Step 1: Add state flags and VAD model slot to `__init__`**
+- [x] **Step 1: Add state flags and VAD model slot to `__init__`**
 
 In `VikoLive.__init__` (currently ends around line 647), add three lines after the existing `self._enroll_target: int = 0` line:
 
@@ -129,7 +129,7 @@ In `VikoLive.__init__` (currently ends around line 647), add three lines after t
         self.raw_queue            = None
 ```
 
-- [ ] **Step 2: Load VAD model lazily and score each chunk**
+- [x] **Step 2: Load VAD model lazily and score each chunk**
 
 Replace the entire `_listen_audio` method (lines 1151–1192) with:
 
@@ -193,7 +193,7 @@ Replace the entire `_listen_audio` method (lines 1151–1192) with:
             _stop.set()
 ```
 
-- [ ] **Step 3: Start VIKO and verify mic + VAD logs**
+- [x] **Step 3: Start VIKO and verify mic + VAD logs**
 
 ```bash
 pkill -f "python viko.py" 2>/dev/null; sleep 1
@@ -203,7 +203,7 @@ sleep 6 && tail -30 /tmp/viko.log
 
 Expected: `[Viko] Mic stream open` appears with no errors. No `VAD error` lines.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 pkill -f "python viko.py" 2>/dev/null
@@ -218,7 +218,7 @@ git commit -m "feat: silero VAD replaces RMS threshold in audio capture"
 **Files:**
 - Modify: `viko.py` lines 1194–1265 (`_verify_and_forward`)
 
-- [ ] **Step 1: Replace `_verify_and_forward` entirely**
+- [x] **Step 1: Replace `_verify_and_forward` entirely**
 
 Replace the entire method (lines 1194–1265) with the following. Key differences from old code:
 - `verified_ok` local var → `self._sv_verified` instance flag
@@ -289,7 +289,7 @@ Replace the entire method (lines 1194–1265) with the following. Key difference
             await self.out_queue.put(item)
 ```
 
-- [ ] **Step 2: Start and verify SV log output**
+- [x] **Step 2: Start and verify SV log output**
 
 ```bash
 nohup .venv/bin/python viko.py > /tmp/viko.log 2>&1 &
@@ -303,7 +303,7 @@ grep "\[SV\]" /tmp/viko.log
 
 Expected: lines like `[SV] similarity=0.712 verified=True` appear (no longer blocked). VIKO should now respond without the 2-second delay.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 pkill -f "python viko.py" 2>/dev/null
@@ -318,7 +318,7 @@ git commit -m "feat: ungate audio input — SV runs in background, always forwar
 **Files:**
 - Create: `tests/core/test_wake_word.py`
 
-- [ ] **Step 1: Write tests for the wake word logic**
+- [x] **Step 1: Write tests for the wake word logic**
 
 The detection logic (to be added in Task 6) is:
 ```python
@@ -375,7 +375,7 @@ def test_empty_buf():
     assert _is_viko_addressed([]) is False
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 ```bash
 .venv/bin/python -m pytest tests/core/test_wake_word.py -v
@@ -383,7 +383,7 @@ def test_empty_buf():
 
 Expected: all PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/core/test_wake_word.py
@@ -397,7 +397,7 @@ git commit -m "test: wake word detection unit tests"
 **Files:**
 - Modify: `viko.py` lines 1275–1316 (`_receive_audio`)
 
-- [ ] **Step 1: Gate `response.data` on wake word + SV**
+- [x] **Step 1: Gate `response.data` on wake word + SV**
 
 Find this block (around line 1275):
 ```python
@@ -422,7 +422,7 @@ Replace with:
                             pass  # drop chunk under load; preferable to crashing
 ```
 
-- [ ] **Step 2: Detect wake word from input transcription**
+- [x] **Step 2: Detect wake word from input transcription**
 
 Find this block (around line 1299):
 ```python
@@ -445,7 +445,7 @@ Replace with:
                                         print("[Wake] 'viko' detected — gate open for this turn")
 ```
 
-- [ ] **Step 3: Reset `_viko_addressed` on turn complete**
+- [x] **Step 3: Reset `_viko_addressed` on turn complete**
 
 Find `if sc.turn_complete:` (around line 1304). Add one line at the very start of that block:
 ```python
@@ -457,7 +457,7 @@ Find `if sc.turn_complete:` (around line 1304). Add one line at the very start o
 
 (Only insert `self._viko_addressed = False` — the remaining lines already exist, don't duplicate them.)
 
-- [ ] **Step 4: Start VIKO and test wake word behaviour**
+- [x] **Step 4: Start VIKO and test wake word behaviour**
 
 ```bash
 nohup .venv/bin/python viko.py > /tmp/viko.log 2>&1 &
@@ -475,7 +475,7 @@ grep -E "\[Wake\]|\[SV\]" /tmp/viko.log
 
 Expected: `[Wake] 'viko' detected — gate open for this turn` appears when you say "Viko".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 pkill -f "python viko.py" 2>/dev/null
@@ -490,7 +490,7 @@ git commit -m "feat: wake word gate — VIKO only responds when addressed as Vik
 **Files:**
 - Modify: `viko.py` line 1380 (`_play_audio`)
 
-- [ ] **Step 1: Change latency setting**
+- [x] **Step 1: Change latency setting**
 
 Find this line (around line 1380):
 ```python
@@ -502,7 +502,7 @@ Replace with:
         latency="low",     # smaller buffer = lower playback latency (~20-50ms vs ~300ms)
 ```
 
-- [ ] **Step 2: Start and verify subjective latency**
+- [x] **Step 2: Start and verify subjective latency**
 
 ```bash
 nohup .venv/bin/python viko.py > /tmp/viko.log 2>&1 &
@@ -511,7 +511,7 @@ sleep 6
 
 Say "Viko, halo". The voice response should start audibly faster than before. If stutter appears during tool execution, note it but accept — it's the documented trade-off.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 pkill -f "python viko.py" 2>/dev/null
@@ -523,7 +523,7 @@ git commit -m "perf: reduce output latency — latency=high to latency=low"
 
 ## Task 8: Full regression test
 
-- [ ] **Step 1: Run all tests**
+- [x] **Step 1: Run all tests**
 
 ```bash
 .venv/bin/python -m pytest tests/ -v
@@ -531,7 +531,7 @@ git commit -m "perf: reduce output latency — latency=high to latency=low"
 
 Expected: all tests pass including `test_vad_smoke.py` and `test_wake_word.py`.
 
-- [ ] **Step 2: End-to-end verification**
+- [x] **Step 2: End-to-end verification**
 
 Start VIKO and run all scenarios:
 
@@ -553,7 +553,7 @@ Check SV + wake word logs:
 grep -E "\[SV\]|\[Wake\]" /tmp/viko.log | tail -20
 ```
 
-- [ ] **Step 3: Final commit**
+- [x] **Step 3: Final commit**
 
 ```bash
 pkill -f "python viko.py" 2>/dev/null

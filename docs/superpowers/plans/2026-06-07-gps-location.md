@@ -1,6 +1,6 @@
 # GPS Live Location Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make the VIKO map marker reflect accurate GPS/WiFi-triangulated position by fixing the already-present CoreLocation implementation in `window.py`.
 
@@ -17,13 +17,13 @@
 
 Context: `_start_corelocation()` creates a `CLLocationManager` and starts location updates, but never sets accuracy or distance filter. It also uses `print()` for errors and status — these should go through `get_logger()` so they appear in the structured log file.
 
-- [ ] **Step 1: Read the current `_start_corelocation` method**
+- [x] **Step 1: Read the current `_start_corelocation` method**
 
 Read `viko/ui/window.py` lines 642–750 to locate:
 - Where `self._cl_manager` is created (line 726)
 - The three `print()` calls (lines 717, 746, 749)
 
-- [ ] **Step 2: Add distanceFilter and desiredAccuracy after manager creation**
+- [x] **Step 2: Add distanceFilter and desiredAccuracy after manager creation**
 
 Find this block (around line 726–727):
 ```python
@@ -41,7 +41,7 @@ Replace with:
             self._cl_manager.setDesiredAccuracy_(100.0)  # kCLLocationAccuracyHundredMeters
 ```
 
-- [ ] **Step 3: Add logger import inside the method and replace print() calls**
+- [x] **Step 3: Add logger import inside the method and replace print() calls**
 
 At the top of `_start_corelocation`, after `try:`, add:
 ```python
@@ -81,14 +81,14 @@ Line ~749 (except block):
             _log.warning("CoreLocation unavailable: %s", e)
 ```
 
-- [ ] **Step 4: Verify syntax**
+- [x] **Step 4: Verify syntax**
 
 ```bash
 .venv/bin/python -m py_compile viko/ui/window.py && echo "OK"
 ```
 Expected: `OK`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko/ui/window.py
@@ -104,7 +104,7 @@ git commit -m "fix: configure CoreLocation accuracy/distance filter, replace pri
 
 Context: `_fetch_location()` (IP-based) does two things: emits `_loc_sig` (marker) AND emits `_country_sig` (country polygon highlight). The CoreLocation delegate only emits `_loc_sig`. This means after a GPS fix, the marker moves but the country polygon stays from the IP lookup. We need to reverse-geocode the GPS coordinates to get the country code and fetch the polygon.
 
-- [ ] **Step 1: Read the delegate's `locationManager_didUpdateLocations_` method**
+- [x] **Step 1: Read the delegate's `locationManager_didUpdateLocations_` method**
 
 Read `viko/ui/window.py` lines 681–698. Current code:
 ```python
@@ -120,7 +120,7 @@ Read `viko/ui/window.py` lines 681–698. Current code:
                     parent._loc_sig.emit(lat, lon, _fmt_label(lat, lon))
 ```
 
-- [ ] **Step 2: Replace the delegate method to also trigger country polygon fetch**
+- [x] **Step 2: Replace the delegate method to also trigger country polygon fetch**
 
 Replace the `locationManager_didUpdateLocations_` method body with:
 ```python
@@ -142,7 +142,7 @@ Replace the `locationManager_didUpdateLocations_` method body with:
                     ).start()
 ```
 
-- [ ] **Step 3: Add `_fetch_country_from_gps` method to the window class**
+- [x] **Step 3: Add `_fetch_country_from_gps` method to the window class**
 
 Add this method directly after `_start_corelocation` (before `_push_latency` at line ~751):
 ```python
@@ -163,14 +163,14 @@ Add this method directly after `_start_corelocation` (before `_push_latency` at 
             pass
 ```
 
-- [ ] **Step 4: Verify syntax**
+- [x] **Step 4: Verify syntax**
 
 ```bash
 .venv/bin/python -m py_compile viko/ui/window.py && echo "OK"
 ```
 Expected: `OK`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add viko/ui/window.py
@@ -183,17 +183,17 @@ git commit -m "feat: fetch country polygon from GPS coordinates via Nominatim"
 
 This task has no code. It is a prerequisite for CoreLocation to deliver coordinates.
 
-- [ ] **Step 1: Open System Settings**
+- [x] **Step 1: Open System Settings**
 
 Go to: **System Settings → Privacy & Security → Location Services**
 
-- [ ] **Step 2: Enable location for Terminal (or the Python process)**
+- [x] **Step 2: Enable location for Terminal (or the Python process)**
 
 Scroll down to find **Terminal** in the app list. If it's not there, VIKO must be run once first (it triggers `requestWhenInUseAuthorization` which registers the app). Toggle it **ON**.
 
 If you launch VIKO from a different terminal emulator (iTerm2, Warp, etc.), enable that app instead.
 
-- [ ] **Step 3: Restart VIKO**
+- [x] **Step 3: Restart VIKO**
 
 ```bash
 pkill -f "python viko.py"

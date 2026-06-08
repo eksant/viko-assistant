@@ -707,7 +707,8 @@ def _process_archive(path: Path, action: str, params: dict, speak=None) -> str:
 
     if action == "list":
         try:
-            import zipfile, tarfile
+            import zipfile
+            import tarfile
             ext = path.suffix.lower()
             if ext == ".zip":
                 with zipfile.ZipFile(path) as z:
