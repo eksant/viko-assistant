@@ -1317,11 +1317,13 @@ class VikoLive:
                             txt = sc.input_transcription.text
                             if txt and not _is_ctrl_seq(txt):
                                 in_buf.append(txt)
+                                # Substring match — accepts "viktor" etc. as false positives;
+                                # deliberate trade-off for robustness against transcription errors
                                 if not self._viko_addressed:
                                     _acc = "".join(in_buf).lower()
                                     if any(kw in _acc for kw in ("viko", "hei viko", "hey viko")):
                                         self._viko_addressed = True
-                                        print("[Wake] 'viko' detected — gate open for this turn")
+                                        print("[Viko] wake word detected — gate open")
 
                         if sc.turn_complete:
                             self._viko_addressed = False   # reset for next turn
