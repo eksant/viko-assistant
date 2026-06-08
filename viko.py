@@ -643,6 +643,9 @@ class VikoLive:
         self._enrolling           = False
         self._enroll_buf: list    = []
         self._enroll_target: int  = 0
+        self._sv_verified:   bool = True   # updated by _verify_and_forward background loop
+        self._viko_addressed: bool = False  # set when "viko" detected in input_transcription
+        self._vad_model             = None  # loaded lazily in _listen_audio
         self.raw_queue            = None
         self.ui.on_text_command = self._on_text_command
         self.ui.on_file_command = self._on_file_command
@@ -1151,6 +1154,10 @@ class VikoLive:
     async def _listen_audio(self):
         import threading as _threading
 
+        if self._vad_model is None:
+            from silero_vad import load_silero_vad
+            self._vad_model = load_silero_vad()
+
         try:
             dev = sd.query_devices(kind='input')
             print(f"[Viko] Mic: {dev['name']} @ {SEND_SAMPLE_RATE}Hz")
@@ -1159,8 +1166,11 @@ class VikoLive:
 
         loop = asyncio.get_running_loop()
         _stop = _threading.Event()
+        _vad  = self._vad_model
 
         def _audio_thread():
+            import numpy as _np
+            import torch as _torch
             try:
                 with sd.RawInputStream(
                     samplerate=SEND_SAMPLE_RATE,
@@ -1175,7 +1185,18 @@ class VikoLive:
                             viko_speaking = self._is_speaking
                         if viko_speaking or self.ui.muted or self.ui.paused:
                             continue
-                        item = {"data": bytes(data), "mime_type": "audio/pcm"}
+                        pcm_f32 = _np.frombuffer(bytes(data), dtype=_np.int16).astype(_np.float32) / 32768.0
+                        # Silero VAD requires 512-sample windows at 16kHz
+                        half = pcm_f32[:512]
+                        try:
+                            speech_prob = float(_vad(_torch.from_numpy(half), SEND_SAMPLE_RATE).detach())
+                        except Exception:
+                            speech_prob = 1.0  # fallback: treat as speech on VAD error
+                        item = {
+                            "data":      bytes(data),
+                            "mime_type": "audio/pcm",
+                            "is_speech": speech_prob > 0.5,
+                        }
                         try:
                             loop.call_soon_threadsafe(self.raw_queue.put_nowait, item)
                         except Exception:
@@ -1187,7 +1208,7 @@ class VikoLive:
         t.start()
 
         try:
-            await asyncio.Event().wait()  # park coroutine; _audio_thread runs independently
+            await asyncio.Event().wait()
         finally:
             _stop.set()
 
@@ -1259,10 +1280,12 @@ class VikoLive:
 
             # Gate: forward real audio when verified; silence otherwise to keep
             # Gemini connection alive and prevent WebSocket timeout
+            # Strip is_speech — it's internal metadata, not a valid Gemini media field
+            media_item = {"data": item["data"], "mime_type": item["mime_type"]}
             if self._verification_bypass or not self._sv.is_enrolled() or verified_ok:
-                await self.out_queue.put(item)
+                await self.out_queue.put(media_item)
             else:
-                await self.out_queue.put({**item, "data": bytes(len(chunk_bytes))})
+                await self.out_queue.put({**media_item, "data": bytes(len(chunk_bytes))})
 
     async def _receive_audio(self):
         print("[Viko] Receive started")
