@@ -15,6 +15,7 @@ opencv-python
 numpy
 faster-whisper>=1.2.1
 resemblyzer>=0.1.1
+silero-vad>=5.1
 mss
 psutil
 send2trash
