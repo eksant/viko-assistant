@@ -52,6 +52,7 @@ from viko.skills.browser_tool import (
 )
 from viko.skills.self_update import self_update
 from viko.tools.declarations import TOOL_DECLARATIONS
+import viko.core.offline as _offline
 
 
 def get_base_dir():
@@ -303,147 +304,24 @@ class VikoLive:
         self._enroll_target = int(10 * SEND_SAMPLE_RATE / CHUNK_SIZE)
         self._enrolling     = True
 
-    def _ollama_chat(self, text: str, system: str) -> str:
-        """Call local Ollama server (localhost:11434). Returns reply string or raises."""
-        import json as _json
-        import urllib.request as _req
-        model = os.environ.get("OLLAMA_MODEL", "qwen2.5:1.5b")
-        payload = _json.dumps({
-            "model":  model,
-            "system": system,
-            "prompt": text,
-            "stream": False,
-        }).encode()
-        req = _req.Request(
-            "http://localhost:11434/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        with _req.urlopen(req, timeout=15) as resp:
-            data = _json.loads(resp.read())
-        return data["response"].strip()
-
-    async def _offline_respond(self, text: str) -> None:
-        """Get LLM reply for text and speak via macOS say. Used in offline mode.
-
-        Priority: Ollama (local) → LLMClient (cloud) → static fallback.
-        """
-        loop = asyncio.get_running_loop()
-        system = (
-            "Kamu adalah VIKO, asisten AI suara pribadi milik Eksa. "
-            "Jawab dalam Bahasa Indonesia, singkat dan jelas (1-2 kalimat). "
-            "Mode offline — tidak ada akses internet saat ini."
-        )
-        reply = None
-
-        # 1. Try local Ollama first (no internet needed)
-        try:
-            reply = await loop.run_in_executor(None, self._ollama_chat, text, system)
-            print(f"[Viko] Offline via Ollama: {reply[:60]}…")
-        except Exception as _e:
-            print(f"[Viko] Ollama unavailable: {_e}")
-
-        # 2. Fallback to cloud LLM (needs internet — may fail if truly offline)
-        if not reply:
-            try:
-                from viko.core.client import LLMClient
-                reply = await loop.run_in_executor(None, LLMClient().chat, text, system)
-            except Exception as _e2:
-                print(f"[Viko] Offline LLM failed: {_e2}")
-
-        if not reply:
-            reply = "Maaf, saya sedang offline dan tidak bisa menjawab sekarang."
-
-        self.ui.write_log(f"Viko [offline]: {reply}")
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                "say", "-v", "Damayanti", reply,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await proc.wait()
-        except Exception:
-            try:
-                proc = await asyncio.create_subprocess_exec("say", reply)
-                await proc.wait()
-            except Exception as _e2:
-                print(f"[Viko] say failed: {_e2}")
-
     async def _offline_mode(self, max_seconds: int = 60) -> None:
-        """Offline listen-and-respond loop using faster-whisper + LLM + macOS say.
-
-        VAD constants:
-          SPEECH_THRESHOLD=300  — int16 RMS above this = active speech
-          SILENCE_CHUNKS=20     — ~1.3s silence (20 × 64ms) ends an utterance
-          MIN_SPEECH_CHUNKS=8   — ~512ms min speech before transcribing
-        """
         from viko.core.offline_stt import OfflineSTT
-
-        stt = self._offline_stt or OfflineSTT()
-        loop = asyncio.get_running_loop()
-        audio_q: asyncio.Queue = asyncio.Queue()
-
-        def _cb(indata, frames, time_info, status):
-            if self.ui.muted or self.ui.paused:
-                return
-            loop.call_soon_threadsafe(audio_q.put_nowait, indata.tobytes())
-
-        buf:           list[bytes] = []
-        silence_count: int  = 0
-        speech_count:  int  = 0
-        in_speech:     bool = False
-        deadline:      float = loop.time() + max_seconds
-
-        with sd.InputStream(
-            samplerate=SEND_SAMPLE_RATE,
+        await _offline.offline_mode(
+            stt=self._offline_stt or OfflineSTT(),
+            sv=self._sv,
+            sv_pass_threshold=SV_PASS_THRESHOLD,
+            verification_bypass=self._verification_bypass,
+            is_muted=lambda: self.ui.muted,
+            is_paused=lambda: self.ui.paused,
+            write_log=self.ui.write_log,
+            sample_rate=SEND_SAMPLE_RATE,
             channels=CHANNELS,
-            dtype="int16",
-            blocksize=CHUNK_SIZE,
-            callback=_cb,
-        ):
-            self.ui.write_log("SYS: Mode offline. Whisper aktif.")
-            print("[Viko] Offline STT active")
-
-            while loop.time() < deadline:
-                try:
-                    chunk = await asyncio.wait_for(audio_q.get(), timeout=1.0)
-                except asyncio.TimeoutError:
-                    continue
-
-                rms = _rms(chunk)
-
-                if rms > SPEECH_THRESHOLD:
-                    buf.append(chunk)
-                    speech_count += 1
-                    silence_count = 0
-                    in_speech = True
-                elif in_speech:
-                    buf.append(chunk)
-                    silence_count += 1
-                    if silence_count >= SILENCE_CHUNKS:
-                        if speech_count >= MIN_SPEECH_CHUNKS:
-                            pcm = b"".join(buf)
-                            sim = await loop.run_in_executor(
-                                None, self._sv.similarity, pcm
-                            )
-                            is_owner = (
-                                self._verification_bypass
-                                or not self._sv.is_enrolled()
-                                or sim >= SV_PASS_THRESHOLD
-                            )
-                            if is_owner:
-                                text = await loop.run_in_executor(
-                                    None, stt.transcribe_pcm, pcm
-                                )
-                                if text.strip():
-                                    self.ui.write_log(f"You [offline]: {text}")
-                                    await self._offline_respond(text)
-                        buf           = []
-                        silence_count = 0
-                        speech_count  = 0
-                        in_speech     = False
-
-        print("[Viko] Offline mode ended — reconnecting")
+            chunk_size=CHUNK_SIZE,
+            speech_threshold=SPEECH_THRESHOLD,
+            silence_chunks=SILENCE_CHUNKS,
+            min_speech_chunks=MIN_SPEECH_CHUNKS,
+            max_seconds=max_seconds,
+        )
 
     def _on_file_command(self, path: str):
         """Called when user uploads a file. Images are sent as vision input."""
