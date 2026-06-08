@@ -61,7 +61,7 @@ def get_base_dir():
 
 BASE_DIR            = get_base_dir()
 PROMPT_PATH         = BASE_DIR / "viko" / "prompt.txt"
-LIVE_MODEL          = "models/gemini-2.5-flash-native-audio-preview-12-2025"
+LIVE_MODEL          = "models/gemini-2.5-flash-native-audio-latest"
 CHANNELS            = 1
 SEND_SAMPLE_RATE    = 16000
 RECEIVE_SAMPLE_RATE = 24000
@@ -69,8 +69,11 @@ CHUNK_SIZE          = 1024
 SPEECH_THRESHOLD    = 40    # int16 RMS — active speech (MacBook Air mic level)
 SILENCE_CHUNKS      = 20    # ~1.3s silence ends an utterance
 MIN_SPEECH_CHUNKS   = 8     # ~512ms minimum speech to process
-SV_PASS_THRESHOLD  = 0.60  # similarity >= this → verified owner
-SV_BLOCK_THRESHOLD = 0.55  # similarity <  this → blocked non-owner
+# NOTE: lowered to clear the stale Jun-7 voice profile, which scores the owner's
+# own voice only ~0.46–0.54. Raise back toward 0.60/0.55 after a clean re-enroll
+# restores proper owner/stranger separation (owner should then score ~0.7+).
+SV_PASS_THRESHOLD  = 0.50  # similarity >= this → verified owner
+SV_BLOCK_THRESHOLD = 0.40  # similarity <  this → blocked non-owner
 
 
 def _get_api_key() -> str:
@@ -617,6 +620,22 @@ def _is_ctrl_seq(text: str) -> bool:
     return bool(_CTRL_SEQ_RE.match(text.strip()))
 
 
+# Gemini Live's input transcription has no language setting and runs an English/
+# multilingual acoustic model, so the Indonesian wake word "Viko" (VEE-koh) comes
+# back inconsistently — "Vico", "Pico", "Biko", "Fico", "Ficou", "Focou" etc.
+# A fixed variant list can't enumerate them all, so match the phonetic SHAPE:
+# labial onset [v/b/p/f/w] + front vowel [i/e/o] + velar [c/k] + back vowel [o/u].
+# This catches the mishearings while rejecting normal ID/EN words (buka, baik,
+# back, book, fokus). False positives are cheap (speaker verification gates to the
+# owner, a stray wake is minor); a MISSED wake — VIKO ignoring you — is not.
+_WAKE_RE    = _re.compile(r"^[vbpfw][ieo]+[ck]+[ou]+$")
+_WAKE_EXTRA = frozenset({"viktor"})  # outlier the shape pattern can't match
+
+def _is_viko_addressed(accumulated: str) -> bool:
+    return any(_WAKE_RE.match(w) or w in _WAKE_EXTRA
+               for w in _re.findall(r"[a-z]+", accumulated.lower()))
+
+
 def _rms(pcm_bytes: bytes) -> float:
     """RMS energy of int16 PCM bytes. Returns 0.0 for empty input."""
     arr = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32)
@@ -670,8 +689,9 @@ class VikoLive:
 
         self.ui.write_log(f"YOU: {text}")
 
-        # Re-enrollment phrase — requires bypass active
-        if text.strip().lower() == "viko, kenali suaraku" and self._verification_bypass:
+        # Re-enrollment phrase. Typed (not spoken) — physical keyboard access already
+        # implies the owner, so no passphrase/bypass gate is needed here.
+        if text.strip().lower() == "viko, kenali suaraku":
             if self._loop:
                 asyncio.run_coroutine_threadsafe(
                     self._start_re_enrollment(), self._loop
@@ -1328,13 +1348,9 @@ class VikoLive:
                             txt = sc.input_transcription.text
                             if txt and not _is_ctrl_seq(txt):
                                 in_buf.append(txt)
-                                # Substring match — accepts "viktor" etc. as false positives;
-                                # deliberate trade-off for robustness against transcription errors
-                                if not self._viko_addressed:
-                                    _acc = "".join(in_buf).lower()
-                                    if any(kw in _acc for kw in ("viko", "hei viko", "hey viko")):
-                                        self._viko_addressed = True
-                                        print("[Viko] wake word detected — gate open")
+                                if not self._viko_addressed and _is_viko_addressed("".join(in_buf)):
+                                    self._viko_addressed = True
+                                    print(f"[Viko] wake word detected — gate open ({txt!r})")
 
                         if sc.turn_complete:
                             self._viko_addressed = False   # reset for next turn

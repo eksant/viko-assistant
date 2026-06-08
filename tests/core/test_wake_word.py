@@ -1,42 +1,68 @@
-_WAKE_KEYWORDS = ("viko", "hei viko", "hey viko")
+import re
+
+# Mirrors viko.py `_is_viko_addressed`. Gemini Live's input transcription has no
+# language setting and renders the Indonesian wake word "Viko" inconsistently —
+# "Vico", "Pico", "Biko", "Fico", "Ficou", "Focou" etc. We match the phonetic
+# SHAPE (labial onset + front vowel + velar + back vowel) rather than a fixed list.
+_WAKE_RE = re.compile(r"^[vbpfw][ieo]+[ck]+[ou]+$")
+_WAKE_EXTRA = frozenset({"viktor"})
 
 
-def _is_viko_addressed(in_buf: list[str]) -> bool:
-    accumulated = "".join(in_buf).lower()
-    return any(kw in accumulated for kw in _WAKE_KEYWORDS)
+def _is_viko_addressed(accumulated: str) -> bool:
+    return any(_WAKE_RE.match(w) or w in _WAKE_EXTRA
+               for w in re.findall(r"[a-z]+", accumulated.lower()))
 
 
-def test_wake_word_single_chunk():
-    assert _is_viko_addressed(["Viko, cuaca hari ini?"]) is True
+# --- mishearings that MUST wake VIKO (observed from real Gemini transcriptions) ---
+
+def test_exact_viko():
+    assert _is_viko_addressed("Viko, cuaca hari ini?") is True
 
 
-def test_wake_word_prefix_hei():
-    assert _is_viko_addressed(["Hei Viko, tolong bantu saya."]) is True
+def test_case_insensitive():
+    assert _is_viko_addressed("VIKO kemana kamu?") is True
 
 
-def test_wake_word_prefix_hey():
-    assert _is_viko_addressed(["Hey Viko, bukakan browser."]) is True
+def test_mishearing_vico():
+    assert _is_viko_addressed("Hello Vico") is True
 
 
-def test_wake_word_case_insensitive():
-    assert _is_viko_addressed(["VIKO kemana kamu?"]) is True
+def test_mishearing_pico_picco():
+    assert _is_viko_addressed("Pico, hello.") is True
+    assert _is_viko_addressed("Picco.") is True
 
 
-def test_wake_word_streaming_chunks():
-    # Gemini transcription may arrive as fragments without spaces between them
-    assert _is_viko_addressed(["Vik", "o, halo"]) is True
+def test_mishearing_biko():
+    assert _is_viko_addressed("Biko, halo") is True
+
+
+def test_mishearing_fico_ficou_focou():
+    # The cases the user reported as failing before the phonetic matcher
+    assert _is_viko_addressed("Fico") is True
+    assert _is_viko_addressed("Ficou.") is True
+    assert _is_viko_addressed("Focou") is True
+
+
+def test_outlier_viktor():
+    assert _is_viko_addressed("viktor") is True
+
+
+# --- normal words that MUST NOT wake VIKO ---
+
+def test_reject_indonesian_words():
+    for w in ["buka pintu", "baik sekali", "fokus dulu", "bocor atapnya",
+              "pojok kanan", "bagus banget", "buku ini", "bisa tidak"]:
+        assert _is_viko_addressed(w) is False, w
+
+
+def test_reject_english_words():
+    for w in ["go back", "a book", "hello there", "the topic", "because of"]:
+        assert _is_viko_addressed(w) is False, w
 
 
 def test_no_wake_word():
-    assert _is_viko_addressed(["Cuaca hari ini bagaimana?"]) is False
+    assert _is_viko_addressed("Cuaca hari ini bagaimana?") is False
 
 
-def test_no_wake_word_partial():
-    # "viktor" contains "viko" — this is a known false positive we accept
-    # Test documents the behaviour rather than asserting False
-    result = _is_viko_addressed(["viktor"])
-    assert isinstance(result, bool)
-
-
-def test_empty_buf():
-    assert _is_viko_addressed([]) is False
+def test_empty():
+    assert _is_viko_addressed("") is False
