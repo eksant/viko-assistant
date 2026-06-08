@@ -1214,79 +1214,67 @@ class VikoLive:
             _stop.set()
 
     async def _verify_and_forward(self):
-        """Input gate: forward audio to out_queue only when speaker is verified.
+        """Run speaker verification in background; always forward real audio to out_queue.
 
-        Uses dual-threshold verification every ~2s to handle silence windows:
-          similarity >= 0.65 → clear owner → gate OPEN
-          similarity <  0.55 → clear non-owner → gate CLOSED
-          0.55–0.65           → ambiguous (silence/transition) → keep current state
-
-        Silence windows (0.45–0.65) don't flip the gate, so owner keeps getting
-        responses even during pauses. Non-owner (0.36–0.54) consistently falls
-        below 0.55 and is blocked within one 2-second window.
+        Updates self._sv_verified (True/False). Output gating happens in _receive_audio.
+        Accumulates only speech chunks (is_speech=True) for resemblyzer so silence windows
+        don't dilute the embedding.
         """
         loop = asyncio.get_running_loop()
-        verify_buf:       list[bytes] = []
-        VERIFY_CHUNKS     = 32    # 32 × 64ms ≈ 2s — minimum for reliable resemblyzer embedding
-        PASS_THRESHOLD    = SV_PASS_THRESHOLD
-        BLOCK_THRESHOLD   = SV_BLOCK_THRESHOLD
-        RECOVERY_WINDOWS  = 5    # after 5 ambiguous windows (~10s) without clear non-owner, reopen
-        verified_ok       = True
-        ambiguous_streak  = 0
+        verify_buf:      list[bytes] = []
+        VERIFY_CHUNKS    = 32    # 32 × 64ms ≈ 2s — minimum for reliable resemblyzer embedding
+        PASS_THRESHOLD   = SV_PASS_THRESHOLD
+        BLOCK_THRESHOLD  = SV_BLOCK_THRESHOLD
+        RECOVERY_WINDOWS = 5
+        ambiguous_streak = 0
 
         while True:
             item        = await self.raw_queue.get()
             chunk_bytes = item["data"]
+            is_speech   = item.get("is_speech", True)
 
-            # Re-enrollment: collect audio, skip normal processing
+            # Re-enrollment: collect audio, skip normal verification
             if self._enrolling:
                 self._enroll_buf.append(item)
                 if len(self._enroll_buf) >= self._enroll_target:
-                    self._enrolling = False
+                    self._enrolling   = False
                     pcm = b"".join(i["data"] for i in self._enroll_buf)
-                    self._enroll_buf = []
+                    self._enroll_buf  = []
                     await loop.run_in_executor(None, self._sv.enroll, pcm)
                     self.ui.write_log("SYS: Suara berhasil didaftarkan.")
-                    verified_ok      = True
-                    ambiguous_streak = 0
-                    verify_buf       = []   # discard pre-enroll overlap
+                    self._sv_verified = True
+                    ambiguous_streak  = 0
+                    verify_buf        = []
                 continue
 
-            # Accumulate for periodic verification
-            verify_buf.append(chunk_bytes)
-            if len(verify_buf) >= VERIFY_CHUNKS:
-                pcm = b"".join(verify_buf)
-                verify_buf = verify_buf[-8:]  # keep ~500ms overlap
-                if self._sv.is_enrolled() and not self._verification_bypass:
-                    # Skip verification on silence — don't let silence PCM close the gate
-                    if _rms(pcm) < SPEECH_THRESHOLD:
-                        print(f"[SV] silence window — gate unchanged (verified={verified_ok})")
-                    else:
-                        sim = await loop.run_in_executor(None, self._sv.similarity, pcm)
-                        print(f"[SV] similarity={sim:.3f} verified={verified_ok}")
-                        if sim >= PASS_THRESHOLD:
-                            verified_ok      = True
-                            ambiguous_streak = 0
-                        elif sim < BLOCK_THRESHOLD:
-                            verified_ok      = False
-                            ambiguous_streak = 0
-                        else:
-                            # ambiguous (0.55–0.60): if blocked, count toward recovery
-                            if not verified_ok:
-                                ambiguous_streak += 1
-                                if ambiguous_streak >= RECOVERY_WINDOWS:
-                                    verified_ok      = True  # non-owner gone, reopen
-                                    ambiguous_streak = 0
-                                    print("[SV] auto-recovery: reopened after silence")
+            # Accumulate speech-only chunks for periodic verification
+            if is_speech:
+                verify_buf.append(chunk_bytes)
 
-            # Gate: forward real audio when verified; silence otherwise to keep
-            # Gemini connection alive and prevent WebSocket timeout
-            # Strip is_speech — it's internal metadata, not a valid Gemini media field
+            if len(verify_buf) >= VERIFY_CHUNKS:
+                pcm        = b"".join(verify_buf)
+                verify_buf = verify_buf[-8:]   # keep ~500ms overlap
+                if self._sv.is_enrolled() and not self._verification_bypass:
+                    sim = await loop.run_in_executor(None, self._sv.similarity, pcm)
+                    print(f"[SV] similarity={sim:.3f} verified={self._sv_verified}")
+                    if sim >= PASS_THRESHOLD:
+                        self._sv_verified = True
+                        ambiguous_streak  = 0
+                    elif sim < BLOCK_THRESHOLD:
+                        self._sv_verified = False
+                        ambiguous_streak  = 0
+                    else:
+                        # ambiguous (0.55–0.60): if blocked, count toward auto-recovery
+                        if not self._sv_verified:
+                            ambiguous_streak += 1
+                            if ambiguous_streak >= RECOVERY_WINDOWS:
+                                self._sv_verified = True
+                                ambiguous_streak  = 0
+                                print("[SV] auto-recovery: reopened after silence")
+
+            # Always forward real audio — output gating is in _receive_audio
             media_item = {"data": item["data"], "mime_type": item["mime_type"]}
-            if self._verification_bypass or not self._sv.is_enrolled() or verified_ok:
-                await self.out_queue.put(media_item)
-            else:
-                await self.out_queue.put({**media_item, "data": bytes(len(chunk_bytes))})
+            await self.out_queue.put(media_item)
 
     async def _receive_audio(self):
         print("[Viko] Receive started")
