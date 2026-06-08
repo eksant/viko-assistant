@@ -681,6 +681,7 @@ class VikoLive:
         if not self._loop or not self.session:
             self.ui.write_log("SYS: Session not ready — try again in a moment.")
             return
+        self._viko_addressed = True  # text command — allow response through gate
         fut = asyncio.run_coroutine_threadsafe(
             self.session.send_client_content(
                 turns={"role": "user", "parts": [{"text": text}]},
@@ -706,6 +707,7 @@ class VikoLive:
     def speak(self, text: str):
         if not self._loop or not self.session:
             return
+        self._viko_addressed = True  # VIKO-initiated speech bypasses wake word gate
         asyncio.run_coroutine_threadsafe(
             self.session.send_client_content(
                 turns={"parts": [{"text": text}]},
@@ -882,6 +884,7 @@ class VikoLive:
 
         if is_image:
             # Send image data directly to Gemini Live vision
+            self._viko_addressed = True  # file upload — allow response through gate
             async def _send_img():
                 data = p.read_bytes()
                 await self.session.send_realtime_input(
@@ -895,6 +898,7 @@ class VikoLive:
             fut = asyncio.run_coroutine_threadsafe(_send_img(), self._loop)
         else:
             # Non-image: just notify with text so VIKO can ask what to do
+            self._viko_addressed = True  # file upload — allow response through gate
             msg = (
                 f"[FILE_UPLOADED] path={path} | name={p.name} | "
                 f"type={p.suffix.lstrip('.')} | size={size_str} | "
@@ -1155,8 +1159,12 @@ class VikoLive:
         import threading as _threading
 
         if self._vad_model is None:
-            from silero_vad import load_silero_vad
-            self._vad_model = load_silero_vad()
+            try:
+                from silero_vad import load_silero_vad
+                self._vad_model = load_silero_vad()
+            except Exception as _e:
+                print(f"[Viko] VAD load failed ({_e}) — treating all audio as speech")
+                self._vad_model = False  # sentinel: unavailable
 
         try:
             dev = sd.query_devices(kind='input')
@@ -1166,7 +1174,7 @@ class VikoLive:
 
         loop = asyncio.get_running_loop()
         _stop = _threading.Event()
-        _vad  = self._vad_model
+        _vad  = self._vad_model if self._vad_model is not False else None
 
         def _audio_thread():
             import numpy as _np
@@ -1186,13 +1194,16 @@ class VikoLive:
                         if viko_speaking or self.ui.muted or self.ui.paused:
                             continue
                         pcm_f32 = _np.frombuffer(bytes(data), dtype=_np.int16).astype(_np.float32) / 32768.0
-                        # Silero VAD requires 512-sample windows at 16kHz
-                        half = pcm_f32[:512]
-                        try:
-                            with _torch.no_grad():
-                                speech_prob = float(_vad(_torch.from_numpy(half), SEND_SAMPLE_RATE))
-                        except Exception:
-                            speech_prob = 1.0  # fallback: treat as speech on VAD error
+                        if _vad is not None:
+                            # Silero VAD requires 512-sample windows at 16kHz
+                            half = pcm_f32[:512]
+                            try:
+                                with _torch.no_grad():
+                                    speech_prob = float(_vad(_torch.from_numpy(half), SEND_SAMPLE_RATE))
+                            except Exception:
+                                speech_prob = 1.0  # fallback: treat as speech on VAD error
+                        else:
+                            speech_prob = 1.0  # VAD unavailable — pass all audio through
                         item = {
                             "data":      bytes(data),
                             "mime_type": "audio/pcm",
@@ -1402,7 +1413,7 @@ class VikoLive:
             channels=CHANNELS,
             dtype="int16",
             blocksize=0,       # let PortAudio choose optimal block size
-            latency="low",     # smaller buffer = lower playback latency (~20-50ms vs ~300ms)
+            latency=0.1,       # 100ms explicit buffer — safe on macOS, ~3x better than "high"
         )
         stream.start()
         loop = asyncio.get_running_loop()
