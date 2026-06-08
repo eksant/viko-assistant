@@ -770,19 +770,55 @@ class VikoLive:
         self._enroll_target = int(10 * SEND_SAMPLE_RATE / CHUNK_SIZE)
         self._enrolling     = True
 
+    def _ollama_chat(self, text: str, system: str) -> str:
+        """Call local Ollama server (localhost:11434). Returns reply string or raises."""
+        import json as _json
+        import urllib.request as _req
+        model = os.environ.get("OLLAMA_MODEL", "qwen2.5:1.5b")
+        payload = _json.dumps({
+            "model":  model,
+            "system": system,
+            "prompt": text,
+            "stream": False,
+        }).encode()
+        req = _req.Request(
+            "http://localhost:11434/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        with _req.urlopen(req, timeout=15) as resp:
+            data = _json.loads(resp.read())
+        return data["response"].strip()
+
     async def _offline_respond(self, text: str) -> None:
-        """Get LLM reply for text and speak via macOS say. Used in offline mode."""
+        """Get LLM reply for text and speak via macOS say. Used in offline mode.
+
+        Priority: Ollama (local) → LLMClient (cloud) → static fallback.
+        """
         loop = asyncio.get_running_loop()
+        system = (
+            "Kamu adalah VIKO, asisten AI suara pribadi milik Eksa. "
+            "Jawab dalam Bahasa Indonesia, singkat dan jelas (1-2 kalimat). "
+            "Mode offline — tidak ada akses internet saat ini."
+        )
+        reply = None
+
+        # 1. Try local Ollama first (no internet needed)
         try:
-            from viko.core.client import LLMClient
-            system = (
-                "Kamu adalah VIKO, asisten AI suara pribadi. "
-                "Jawab dalam Bahasa Indonesia, singkat dan jelas (1-2 kalimat). "
-                "Mode offline — tidak ada akses internet saat ini."
-            )
-            reply = await loop.run_in_executor(None, LLMClient().chat, text, system)
+            reply = await loop.run_in_executor(None, self._ollama_chat, text, system)
+            print(f"[Viko] Offline via Ollama: {reply[:60]}…")
         except Exception as _e:
-            print(f"[Viko] Offline LLM failed: {_e}")
+            print(f"[Viko] Ollama unavailable: {_e}")
+
+        # 2. Fallback to cloud LLM (needs internet — may fail if truly offline)
+        if not reply:
+            try:
+                from viko.core.client import LLMClient
+                reply = await loop.run_in_executor(None, LLMClient().chat, text, system)
+            except Exception as _e2:
+                print(f"[Viko] Offline LLM failed: {_e2}")
+
+        if not reply:
             reply = "Maaf, saya sedang offline dan tidak bisa menjawab sekarang."
 
         self.ui.write_log(f"Viko [offline]: {reply}")

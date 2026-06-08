@@ -17,6 +17,17 @@ stop_existing() {
     fi
 }
 
+start_ollama() {
+    # Start Ollama in background if installed but not already running
+    local bin="/Applications/Ollama.app/Contents/Resources/ollama"
+    [ -f "$bin" ] || return
+    curl -sf http://localhost:11434/api/tags > /dev/null 2>&1 && { echo "Ollama already running."; return; }
+    echo "Starting Ollama (offline LLM)..."
+    OLLAMA_MODELS="$(pwd)/models/ollama" "$bin" serve >> /tmp/ollama.log 2>&1 &
+    sleep 2
+    curl -sf http://localhost:11434/api/tags > /dev/null 2>&1 && echo "Ollama ready." || echo "Ollama failed to start (non-fatal)."
+}
+
 if [[ "${1:-}" == "--app" ]]; then
     DIST="dist/VIKO.app"
     if [ ! -d "$DIST" ]; then
@@ -30,6 +41,7 @@ if [[ "${1:-}" == "--app" ]]; then
     echo "Done. Check Console.app or logtail for output."
 else
     stop_existing
+    start_ollama
     echo "Starting VIKO (dev) → log: $LOG"
     nohup .venv/bin/python viko.py > "$LOG" 2>&1 &
     PID=$!
